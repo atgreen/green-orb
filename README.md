@@ -94,6 +94,8 @@ The URL format for generic webhooks is described at
 
 The channel type `kafka` is for sending messages to a kafka broker.
 
+[TBD]
+
 ### Running shell scripts
 
 The channel type `exec` is for running arbitrary shell commands.
@@ -111,6 +113,13 @@ stacks to a temporary file for later examination.
 ```
 
 ### Restarting your process
+
+The channel type `restart` is for restarting your observed process.
+
+The `orb-ag` process will run continuously, but it will force the
+observed process to terminate and then restart.
+
+[TBD]
 
 ## Author and License
 
