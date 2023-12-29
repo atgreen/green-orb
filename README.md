@@ -2,14 +2,20 @@
 > An 'Observe and Report Buddy' for your SRE toolbox
 
 `oarb` monitors your program's console output for regexps that you
-define, and sends notifications to specific channels on every match.
+define and, when found, performs some action.  Actions include:
 
-Supported notification channels include:
-- webhooks
-- slack
+* sending notifications through one of a number of popular messaging
+  services, including slack, email, discord, and many more.
+* sending webhooks for processing by services like the Ansible
+  Automation Platform, to run job templates, for instance.
+* executing arbitrary shell commands to, for instance, capture a thread dump of
+  the java process being observed
+* restarting your program, which may be useful as a last resort in a
+  containerized environment where you don't necessarily wan't to
+  restart your container.
 
 `oarb` is very easy to configure and use.  It is one binary and one yaml
-config file.  Simply add `oarb -c config.yaml` before your program.  For instance, instead of:
+config file.  Simply add `oarb -c config.yaml` before your program.  For example, instead of:
 ```
 $ java -jar mywebapp.jar
 ```

@@ -7,6 +7,7 @@ package main
 
 import (
     "bufio"
+    "bytes"
     "flag"
     "fmt"
     "gopkg.in/yaml.v3"
@@ -14,6 +15,7 @@ import (
     "os"
     "os/exec"
     "regexp"
+    "github.com/containrrr/shoutrrr"
     "strings"
     "sync"
     // Uncomment or add imports as you implement the respective features.
@@ -23,7 +25,8 @@ import (
 type Channel struct {
      Name string    `yaml:"name"`
      Type string    `yaml:"type"`
-     Settings map[string]interface{} `yaml:"settings"`
+     URL string     `yaml:"url"`
+     Shell string   `yaml:"shell"`
 }
 
 type Signal struct {
@@ -57,6 +60,7 @@ type CompiledSignal struct {
 }
 
 type Notification struct {
+    PID         int
     Channel     Channel
     Message     string
 }
@@ -81,15 +85,23 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int, wg *syn
         go func(workerID int) {
             defer wg.Done()
             for notification := range notificationQueue {
-                // Process the notification (send emails, HTTP requests, etc.)
-                fmt.Printf("Worker %d processing notification for channel %s\n", workerID, notification.Channel.Name)
-                switch channel.Type {
-                    case "slack":
-                            // send message to slack
-                    case "webhook":
-                           // send message to webhook
-                  }
-              }
+            switch notification.Channel.Type {
+            case "sender":
+                err := shoutrrr.Send(notification.Channel.URL, notification.Message)
+                if err != nil {
+                    fmt.Printf("OARB ERROR: %s\n", err)
+                }
+            case "exec":
+               var stdout bytes.Buffer
+               var stderr bytes.Buffer
+               cmd := exec.Command("bash", "-c", notification.Channel.Shell)
+               cmd.Env = os.Environ()
+               cmd.Env = append(cmd.Env, fmt.Sprintf("OARB_PID=%d", notification.PID))
+               cmd.Stdout = &stdout
+               cmd.Stderr = &stderr
+               cmd.Run()
+               }
+}
         }(i)
     }
 }
@@ -107,14 +119,6 @@ func main() {
     if err != nil {
        fmt.Println("Failed to load config:", err)
        os.Exit(1)
-    }
-
-    for _, channel := range config.Channel {
-        fmt.Printf("Loaded channel: %s of type %s with settings: %v\n", channel.Name, channel.Type, channel.Settings)
-    }
-
-    for _, signal := range config.Signal {
-        fmt.Printf("Loaded signal: %s to %s\n", signal.Regex, signal.Channel)
     }
 
     compiledSignals, _ := compileSignals(config.Signal)
@@ -149,15 +153,17 @@ func main() {
         // Handle error
     }
 
+    pid := cmd.Process.Pid
+
     // Increment WaitGroup and start reading stdout
     wg.Add(2)
     go func() {
         defer wg.Done()
-        monitorOutput(bufio.NewScanner(stdout), compiledSignals, notificationQueue, channelMap)
+        monitorOutput(pid, bufio.NewScanner(stdout), compiledSignals, notificationQueue, channelMap)
     }()
     go func() {
         defer wg.Done()
-        monitorOutput(bufio.NewScanner(stderr), compiledSignals, notificationQueue, channelMap)
+        monitorOutput(pid, bufio.NewScanner(stderr), compiledSignals, notificationQueue, channelMap)
     }()
 
     // Wait for all reading to be complete
@@ -188,15 +194,14 @@ func main() {
     }
 }
 
-func monitorOutput(scanner *bufio.Scanner, compiledSignals []CompiledSignal, notificationQueue chan Notification, channelMap map[string]Channel) {
+func monitorOutput(pid int, scanner *bufio.Scanner, compiledSignals []CompiledSignal, notificationQueue chan Notification, channelMap map[string]Channel) {
     for scanner.Scan() {
         line := scanner.Text()
 
         for _, signal := range compiledSignals {
             if signal.Regex.MatchString(line) {
-                fmt.Printf("Match found for channel %s: %s\n", signal.Channel, line)
                 channel, _ := channelMap[signal.Channel]
-                notificationQueue <- Notification{Channel: channel, Message: line}
+                notificationQueue <- Notification{PID: pid, Channel: channel, Message: line}
             }
         }
 
