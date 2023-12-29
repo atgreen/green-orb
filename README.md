@@ -9,6 +9,7 @@ include:
   services, including slack, email, discord, and many more.
 * sending webhooks for processing by services like the Ansible
   Automation Platform.
+* sending messages on a kafka topic
 * executing arbitrary shell commands, allowing you to, for instance,
   capture thread dumps of the process being observed.
 * restarting the program being observed (avoiding pod restarts on k8s
@@ -53,8 +54,9 @@ signals:
 console logs still go to the console, and the exit code for your
 program is passed on through `orb-ag`.
 
-Sender Services
-----------------
+# Action Details
+
+## Sending messages to messaging platforms
 
 `orb-ag` uses `shoutrrr` for sending notifications.  Use the following
 URL formats for these different services.  Additional details are
@@ -85,6 +87,26 @@ documentation](https://containrrr.dev/shoutrrr/v0.8/services/overview/).
 The URL format for generic webhooks is described at
 [https://containrrr.dev/shoutrrr/v0.8/services/generic/](https://containrrr.dev/shoutrrr/v0.8/services/generic/).
 
+## Sending Kafka messages
+
+The channel type `kafka` is for sending messages to a kafka broker.
+
+## Running shell scripts
+
+The channel type `exec` is for running arbitrary shell commands.  The
+process ID of the observed process is presented to the shell code
+through the environment variable `$ORB_PID`.  In this example, the
+channel `thread-dump` invokes the `jstack` tool to dump java thread
+stacks to a temporary file for later examination.
+
+```
+  - name: "thread-dump"
+    type: "exec"
+    shell: |
+      jstack $ORB_PID > /tmp/thread-dump-$(date).txt 2>&1
+```
+
+## Restarting your process
 
 Author and License
 -------------------
