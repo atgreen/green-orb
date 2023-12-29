@@ -34,20 +34,27 @@ ENTRYPOINT [ "java","-jar", "jar-file-name.jar" ]
 ENTRYPOINT [ "orb-ag", "-c", "config.yaml", "java","-jar", "jar-file-name.jar" ]
 ```
 
-
-
-If `config.yaml` contains the following, you'll get a slack message on
-every console log message that starts with `ERROR:`:
+If `config.yaml` contains the following, you'll get an email every
+time your application start up, and a thread dump every time you get a
+thread pool exhausted warning.
 
 ```
 channels:
-  - name: "slack_alerts"
+  - name: "startup-email"
     type: "notify"
-    url:  "generic:localhost:5000/?contentType=json"
+    url:  "smtp://MYEMAIL@gmail.com:MYPASSWORD@smtp.gmail.com:587/?from=MYEMAIL@gmail.com&to=MYEMAIL@gmail.com&subject=Application%20Starting!"
+
+  - name: "thread-dump"
+    type: "exec"
+    shell: |
+      jstack $ORB_PID > /tmp/thread-dump-$(date).txt 2>&1
 
 signals:
-  - regex: "^ERROR:"
-    channel: "slack_alerts"
+  - regex: "Starting Application"
+    channel: "startup-email"
+
+  - regex: "Warning: thread pool exhausted"
+    channel: "thread-dump"
 ```
 
 `orb-ag` does not interfere with the execution of your program.  All
