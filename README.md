@@ -13,7 +13,7 @@ include:
 * executing arbitrary shell commands, allowing you to, for instance,
   capture thread dumps of the process being observed.
 * restarting the program being observed (avoiding pod restarts on k8s
-  platforms, for instance)
+  platforms).
 
 `orb-ag` is very easy to configure and use.  It's just one binary and one yaml
 config file.  Simply preface your program with `orb-ag -c config.yaml`.  For example, instead of:
