@@ -86,7 +86,7 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int, wg *syn
             defer wg.Done()
             for notification := range notificationQueue {
             switch notification.Channel.Type {
-            case "sender":
+            case "notify":
                 err := shoutrrr.Send(notification.Channel.URL, notification.Message)
                 if err != nil {
                     fmt.Printf("OARB ERROR: %s\n", err)
