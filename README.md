@@ -30,7 +30,7 @@ ENTRYPOINT [ "java","-jar", "jar-file-name.jar" ]
 ```
 ...in your Dockerfile, to...
 ```
-ENTRYPOINT [ "org-ag", "-c", "config.yaml", "java","-jar", "jar-file-name.jar" ]
+ENTRYPOINT [ "orb-ag", "-c", "config.yaml", "java","-jar", "jar-file-name.jar" ]
 ```
 
 
