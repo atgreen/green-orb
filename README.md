@@ -1,21 +1,21 @@
 # orb-ag
 > An 'Observe and Report Buddy' for your SRE toolbox
 
-`orb-ag` monitors your program's console output for regexps that you
-define and, when found, performs some action.  Actions include:
+`orb-ag` monitors your program's console output for patterns that you
+define, and performs actions based on what it detects.  Actions
+include:
 
 * sending notifications through one of a number of popular messaging
   services, including slack, email, discord, and many more.
 * sending webhooks for processing by services like the Ansible
-  Automation Platform, to run job templates, for instance.
-* executing arbitrary shell commands to, for instance, capture a thread dump of
-  the java process being observed
-* restarting your program, which may be useful as a last resort in a
-  containerized environment where you don't necessarily wan't to
-  restart your container.
+  Automation Platform.
+* executing arbitrary shell commands, allowing you to, for instance,
+  capture thread dumps of the process being observed.
+* restarting the program being observed (avoiding pod restarts on k8s
+  platforms, for instance)
 
-`orb-ag` is very easy to configure and use.  It is one binary and one yaml
-config file.  Simply add `orb-ag -c config.yaml` before your program.  For example, instead of:
+`orb-ag` is very easy to configure and use.  It's just one binary and one yaml
+config file.  Simply preface your program with `orb-ag -c config.yaml`.  For example, instead of:
 ```
 $ java -jar mywebapp.jar
 ```
@@ -23,6 +23,17 @@ $ java -jar mywebapp.jar
 ```
 $ orb-ag -c config.yaml java -jar mywebapp.jar
 ```
+
+Or, if you are using containers, change...
+```
+ENTRYPOINT [ "java","-jar", "jar-file-name.jar" ]
+```
+...in your Dockerfile, to...
+```
+ENTRYPOINT [ "org-ag", "-c", "config.yaml", "java","-jar", "jar-file-name.jar" ]
+```
+
+
 
 If `config.yaml` contains the following, you'll get a slack message on
 every console log message that starts with `ERROR:`:
