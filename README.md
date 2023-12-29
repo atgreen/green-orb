@@ -42,7 +42,7 @@ every console log message that starts with `ERROR:`:
 ```
 channels:
   - name: "slack_alerts"
-    type: "sender"
+    type: "notify"
     url:  "generic:localhost:5000/?contentType=json"
 
 signals:
@@ -56,7 +56,10 @@ program is passed on through `orb-ag`.
 
 # Action Details
 
-## Sending messages to messaging platforms
+## Sending notifications to messaging platforms
+
+The channel type `notify` is for sending messages to popular messaging
+platforms.
 
 `orb-ag` uses `shoutrrr` for sending notifications.  Use the following
 URL formats for these different services.  Additional details are
@@ -93,8 +96,9 @@ The channel type `kafka` is for sending messages to a kafka broker.
 
 ## Running shell scripts
 
-The channel type `exec` is for running arbitrary shell commands.  The
-process ID of the observed process is presented to the shell code
+The channel type `exec` is for running arbitrary shell commands.
+
+The process ID of the observed process is presented to the shell code
 through the environment variable `$ORB_PID`.  In this example, the
 channel `thread-dump` invokes the `jstack` tool to dump java thread
 stacks to a temporary file for later examination.
