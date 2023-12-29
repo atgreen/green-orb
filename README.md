@@ -48,11 +48,11 @@ documentation](https://containrrr.dev/shoutrrr/v0.8/services/overview/).
 |-------------|-------------------------------------------------------------------------------------------- |
 | Bark        | `bark://devicekey@host`                                                                    |
 | Discord     | `discord://token@id`                                                                       |
-| Email       | `smtp://username:password@host:port/?from=fromAddress&;to=recipient1[,recipient2,...]`     |
+| Email       | `smtp://username:password@host:port/?from=fromAddress&to=recipient1[,recipient2,...]`     |
 | Gotify      | `gotify://gotify-host/token`                                                               |
-| Google Chat | `googlechat://chat.googleapis.com/v1/spaces/FOO/messages?key=bar&;token=baz`               |
-| IFTTT       | `ifttt://key/?events=event1[,event2,...]&;value1=value1&;value2=value2&;value3=value3`     |
-| Join        | `join://shoutrrr:api-key@join/?devices=device1[,device2, ...][&;icon=icon][&;title=title]` |
+| Google Chat | `googlechat://chat.googleapis.com/v1/spaces/FOO/messages?key=bar&token=baz`               |
+| IFTTT       | `ifttt://key/?events=event1[,event2,...]&value1=value1&value2=value2&value3=value3`     |
+| Join        | `join://shoutrrr:api-key@join/?devices=device1[,device2, ...][&icon=icon][&title=title]` |
 | Mattermost  | `mattermost://[username@]mattermost-host/token[/channel]`                                  |
 | Matrix      | `matrix://username:password@host:port/[?rooms=!roomID1[,roomAlias2]]`                      |
 | Ntfy        | `ntfy://username:password@ntfy.sh/topic`                                                   |
@@ -63,7 +63,7 @@ documentation](https://containrrr.dev/shoutrrr/v0.8/services/overview/).
 | Slack       | `slack://[botname@]token-a/token-b/token-c`                                                |
 | Teams       | `teams://group@tenant/altId/groupOwner?host=organization.webhook.office.com`               |
 | Telegram    | `telegram://token@telegram?chats=@channel-1[,chat-id-1,...]`                               |
-| Zulip Chat  | `zulip://bot-mail:bot-key@zulip-domain/?stream=name-or-id&;topic=name`                     |
+| Zulip Chat  | `zulip://bot-mail:bot-key@zulip-domain/?stream=name-or-id&topic=name`                     |
 
 The URL format for generic webhooks is described at
 [https://containrrr.dev/shoutrrr/v0.8/services/generic/](https://containrrr.dev/shoutrrr/v0.8/services/generic/).
