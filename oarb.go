@@ -56,6 +56,11 @@ type CompiledSignal struct {
     Channel string
 }
 
+type Notification struct {
+    Channel     Channel
+    Message     string
+}
+
 func loadYAMLConfig(filename string, config *Config) error {
     bytes, err := ioutil.ReadFile(filename)
     if err != nil {
@@ -68,6 +73,20 @@ func loadYAMLConfig(filename string, config *Config) error {
     }
 
     return nil
+}
+
+func startWorkers(notificationQueue <-chan Notification, numWorkers int, wg *sync.WaitGroup) {
+    for i := 0; i < numWorkers; i++ {
+        wg.Add(1)
+        go func(workerID int) {
+            defer wg.Done()
+            for notification := range notificationQueue {
+                // Process the notification (send emails, HTTP requests, etc.)
+                fmt.Printf("Worker %d processing notification for channel %s\n", workerID, notification.Channel.Name)
+//                triggerNotification(notification.ChannelName, notification.Message)
+            }
+        }(i)
+    }
 }
 
 func main() {
@@ -102,6 +121,19 @@ func main() {
         os.Exit(1)
     }
 
+    notificationQueue := make(chan Notification, 100)
+
+    // Use a WaitGroup to wait for the reading goroutines to finish
+    var wg sync.WaitGroup
+    var nwg sync.WaitGroup
+
+    startWorkers(notificationQueue, 5, &nwg)
+
+    channelMap := make(map[string]Channel)
+    for _, ch := range config.Channel {
+        channelMap[ch.Name] = ch
+    }
+
     // Prepare to run the subprocess
     cmd := exec.Command(subprocessArgs[0], subprocessArgs[1:]...)
     // Rest of your code to handle the subprocess...
@@ -112,18 +144,15 @@ func main() {
         // Handle error
     }
 
-    // Use a WaitGroup to wait for the reading goroutines to finish
-    var wg sync.WaitGroup
-
     // Increment WaitGroup and start reading stdout
     wg.Add(2)
     go func() {
         defer wg.Done()
-        monitorOutput(bufio.NewScanner(stdout), compiledSignals)
+        monitorOutput(bufio.NewScanner(stdout), compiledSignals, notificationQueue, channelMap)
     }()
     go func() {
         defer wg.Done()
-        monitorOutput(bufio.NewScanner(stderr), compiledSignals)
+        monitorOutput(bufio.NewScanner(stderr), compiledSignals, notificationQueue, channelMap)
     }()
 
     // Wait for all reading to be complete
@@ -131,6 +160,11 @@ func main() {
 
     // Wait for the command to finish
     err = cmd.Wait()
+
+    close(notificationQueue)
+
+    // Wait for all reading to be complete
+    nwg.Wait()
 
     // Handle exit status
     if err != nil {
@@ -149,13 +183,15 @@ func main() {
     }
 }
 
-func monitorOutput(scanner *bufio.Scanner, compiledSignals []CompiledSignal) {
+func monitorOutput(scanner *bufio.Scanner, compiledSignals []CompiledSignal, notificationQueue chan Notification, channelMap map[string]Channel) {
     for scanner.Scan() {
         line := scanner.Text()
 
         for _, signal := range compiledSignals {
             if signal.Regex.MatchString(line) {
                 fmt.Printf("Match found for channel %s: %s\n", signal.Channel, line)
+                channel, _ := channelMap[signal.Channel]
+                notificationQueue <- Notification{Channel: channel, Message: line}
             }
         }
 
