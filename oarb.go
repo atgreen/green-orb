@@ -83,8 +83,13 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int, wg *syn
             for notification := range notificationQueue {
                 // Process the notification (send emails, HTTP requests, etc.)
                 fmt.Printf("Worker %d processing notification for channel %s\n", workerID, notification.Channel.Name)
-//                triggerNotification(notification.ChannelName, notification.Message)
-            }
+                switch channel.Type {
+                    case "slack":
+                            // send message to slack
+                    case "webhook":
+                           // send message to webhook
+                  }
+              }
         }(i)
     }
 }

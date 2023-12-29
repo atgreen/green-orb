@@ -2,22 +2,23 @@
 channels:
 
   - name: "slack_alerts"
-    type: "slack"
-    settings:
-      token: "xoxb-your-slack-token"
-      channel: "#alerts"
+    type: "sender"
+    url:  "generic:localhost:5000/?contentType=json"
 
   - name: "http_webhook"
-    type: "webhook"
-    settings:
-      url: "http://example.com/webhook"
-      method: "POST"
-      headers:
-        Content-Type: "application/json"
-        Authorization: "Bearer your_token"
-      payload_template: '{"text": "{{.Message}}"}'
+    type: "sender"
+    url:  "ifttt:/dfgdfgd/dfg/dfg/"
+
+  - name: "restart!"
+    type: "restart"
+
+  - name: "jdump"
+    type: "exec"
+    shell: |
+      jdump $OARB_PID | gzip -9 > /tmp/jump-`date`.gz
 
 signals:
 
   - regex: "go"
     channel: "slack_alerts"
+    backoff: 5s
