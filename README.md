@@ -54,9 +54,9 @@ signals:
 console logs still go to the console, and the exit code for your
 program is passed on through `orb-ag`.
 
-# Action Details
+## Action Details
 
-## Sending notifications to messaging platforms
+### Sending notifications to messaging platforms
 
 The channel type `notify` is for sending messages to popular messaging
 platforms.
@@ -90,11 +90,11 @@ documentation](https://containrrr.dev/shoutrrr/v0.8/services/overview/).
 The URL format for generic webhooks is described at
 [https://containrrr.dev/shoutrrr/v0.8/services/generic/](https://containrrr.dev/shoutrrr/v0.8/services/generic/).
 
-## Sending Kafka messages
+### Sending Kafka messages
 
 The channel type `kafka` is for sending messages to a kafka broker.
 
-## Running shell scripts
+### Running shell scripts
 
 The channel type `exec` is for running arbitrary shell commands.
 
@@ -110,10 +110,9 @@ stacks to a temporary file for later examination.
       jstack $ORB_PID > /tmp/thread-dump-$(date).txt 2>&1
 ```
 
-## Restarting your process
+### Restarting your process
 
-Author and License
--------------------
+## Author and License
 
 `orb-ag` was written by [Anthony
 Green](https://github.com/atgreen), and is distributed under the terms
