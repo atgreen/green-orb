@@ -1,5 +1,5 @@
 # oarb
-Observe and Report Buddy
+> An 'Observe and Report Buddy' for your SRE toolbox
 
 `oarb` monitors your program's console output for regexps that you
 define, and sends notifications to specific channels on every match.
@@ -37,3 +37,12 @@ signals:
 `oarb` does not interfere with the execution of your program.  All
 console logs still go to the console, and the exit code for your
 program is passed on through `oarb`.
+
+Author and License
+-------------------
+
+`oarb` was written by [Anthony
+Green](https://github.com/atgreen), and is distributed under the terms
+of the MIT License.  See
+[LICENSE](https://raw.githubusercontent.com/atgreen/oarb/main/LICENSE)
+for details.
