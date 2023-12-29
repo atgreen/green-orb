@@ -45,7 +45,7 @@ available from the [`shoutrrr`
 documentation](https://containrrr.dev/shoutrrr/v0.8/services/overview/).
 
 | Service     | URL Format                                                                                 |
-|-------------+--------------------------------------------------------------------------------------------|
+|-------------|-------------------------------------------------------------------------------------------- |
 | Bark        | `bark://devicekey@host`                                                                    |
 | Discord     | `discord://token@id`                                                                       |
 | Email       | `smtp://username:password@host:port/?from=fromAddress&;to=recipient1[,recipient2,...]`     |
