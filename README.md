@@ -1,7 +1,7 @@
-# oarb
+# orb-ag
 > An 'Observe and Report Buddy' for your SRE toolbox
 
-`oarb` monitors your program's console output for regexps that you
+`orb-ag` monitors your program's console output for regexps that you
 define and, when found, performs some action.  Actions include:
 
 * sending notifications through one of a number of popular messaging
@@ -14,14 +14,14 @@ define and, when found, performs some action.  Actions include:
   containerized environment where you don't necessarily wan't to
   restart your container.
 
-`oarb` is very easy to configure and use.  It is one binary and one yaml
-config file.  Simply add `oarb -c config.yaml` before your program.  For example, instead of:
+`orb-ag` is very easy to configure and use.  It is one binary and one yaml
+config file.  Simply add `orb-ag -c config.yaml` before your program.  For example, instead of:
 ```
 $ java -jar mywebapp.jar
 ```
 ...use...
 ```
-$ oarb -c config.yaml java -jar mywebapp.jar
+$ orb-ag -c config.yaml java -jar mywebapp.jar
 ```
 
 If `config.yaml` contains the following, you'll get a slack message on
@@ -38,14 +38,14 @@ signals:
     channel: "slack_alerts"
 ```
 
-`oarb` does not interfere with the execution of your program.  All
+`orb-ag` does not interfere with the execution of your program.  All
 console logs still go to the console, and the exit code for your
-program is passed on through `oarb`.
+program is passed on through `orb-ag`.
 
 Sender Services
 ----------------
 
-`oarb` uses `shoutrrr` for sending notifications.  Use the following
+`orb-ag` uses `shoutrrr` for sending notifications.  Use the following
 URL formats for these different services.  Additional details are
 available from the [`shoutrrr`
 documentation](https://containrrr.dev/shoutrrr/v0.8/services/overview/).
@@ -78,8 +78,8 @@ The URL format for generic webhooks is described at
 Author and License
 -------------------
 
-`oarb` was written by [Anthony
+`orb-ag` was written by [Anthony
 Green](https://github.com/atgreen), and is distributed under the terms
 of the MIT License.  See
-[LICENSE](https://raw.githubusercontent.com/atgreen/oarb/main/LICENSE)
+[LICENSE](https://raw.githubusercontent.com/atgreen/orb-ag/main/LICENSE)
 for details.
