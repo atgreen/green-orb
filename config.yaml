@@ -1,0 +1,23 @@
+---
+channels:
+
+  - name: "slack_alerts"
+    type: "slack"
+    settings:
+      token: "xoxb-your-slack-token"
+      channel: "#alerts"
+
+  - name: "http_webhook"
+    type: "webhook"
+    settings:
+      url: "http://example.com/webhook"
+      method: "POST"
+      headers:
+        Content-Type: "application/json"
+        Authorization: "Bearer your_token"
+      payload_template: '{"text": "{{.Message}}"}'
+
+signals:
+
+  - regex: "go"
+    channel: "slack_alerts"
