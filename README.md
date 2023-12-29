@@ -8,8 +8,12 @@ Supported notification channels include:
 - webhooks
 - slack
 
-`oarb` is very easy to configure and use.  It is one binary one yaml
-config file.  Simply add `oarb -c config.yaml` before your program.  For instance:
+`oarb` is very easy to configure and use.  It is one binary and one yaml
+config file.  Simply add `oarb -c config.yaml` before your program.  For instance, instead of:
+```
+$ java -jar mywebapp.jar
+```
+...use...
 ```
 $ oarb -c config.yaml java -jar mywebapp.jar
 ```
