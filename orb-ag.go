@@ -250,10 +250,6 @@ func monitorOutput(pid int, scanner *bufio.Scanner, compiledSignals []CompiledSi
 	}
 }
 
-func makeAPICall(line string) {
-	// Implement the REST API call here
-}
-
 // loadRegexps loads regexps from a specified file and returns a slice of compiled regexps.
 func loadRegexps(filepath string) ([]*regexp.Regexp, error) {
 	// Read the file content
