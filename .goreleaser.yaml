@@ -12,10 +12,11 @@ project_name: orb-ag
 
 before:
   hooks:
-    # You may remove this if you don't use go modules.
     - go mod tidy
-    # you may remove this if you don't need go generate
     - go generate ./...
+
+sboms:
+  - artifacts: binary
 
 builds:
   - env:
@@ -26,18 +27,28 @@ builds:
       - linux
       - windows
       - darwin
+    goarch:
+      - amd64
+      - arm64
+      - arm
+      - s390x
+      - ppc64le
+    goarm:
+      - 7
+    ignore:
+      - goos: windows
+        goarch: arm64
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: s390x
+      - goos: windows
+        goarch: ppc64le
 
 archives:
   - format: tar.gz
-    # this name template makes the OS and Arch compatible with the results of `uname`.
-    name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
-    # use zip for windows archives
+    name_template: "{{ .Binary }}"
+    allow_different_binary_count: true
     format_overrides:
       - goos: windows
         format: zip
