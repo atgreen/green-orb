@@ -115,7 +115,16 @@ The URL format for generic webhooks is described at
 
 The channel type `kafka` is for sending messages to a kafka broker.
 
-[TBD]
+You must specify a broker and topic in your definition, like so:
+
+```
+  - name: "kafka-alerts"
+    type: "kafka"
+    broker: "mybroker.example.com:9092"
+    topic: "orb-alerts"
+```
+
+Producer timeouts are currently fixed at 5 seconds.
 
 ### Running shell scripts
 
