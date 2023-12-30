@@ -47,7 +47,9 @@ channels:
   - name: "thread-dump"
     type: "exec"
     shell: |
-      jstack $ORB_PID > /tmp/thread-dump-$(date).txt 2>&1
+      FILENAME=thread-dump-$(date).txt
+      jstack $ORB_PID > /tmp/${FILENAME}
+      aws s3 mv /tmp/${FILENAME} s3:/my-bucket/${FILENAME}
 
 signals:
   - regex: "Starting Application"
@@ -122,13 +124,16 @@ The channel type `exec` is for running arbitrary shell commands.
 The process ID of the observed process is presented to the shell code
 through the environment variable `$ORB_PID`.  In this example, the
 channel `thread-dump` invokes the `jstack` tool to dump java thread
-stacks to a temporary file for later examination.
+stacks to a file that is copied into an s3 bucket for later
+examination.
 
 ```
   - name: "thread-dump"
     type: "exec"
     shell: |
-      jstack $ORB_PID > /tmp/thread-dump-$(date).txt 2>&1
+      FILENAME=thread-dump-$(date).txt
+      jstack $ORB_PID > /tmp/${FILENAME}
+      aws s3 mv /tmp/${FILENAME} s3:/my-bucket/${FILENAME}
 ```
 
 ### Restarting your process
