@@ -2,7 +2,7 @@
 > An 'Observe and Report Buddy' for your SRE toolbox
 
 > [!WARNING]
-> This is a work in progress and far from ready for use.
+> This is an experimental work in progress.
 > Feedback/Issues/PRs are always welcome.
 
 `orb-ag` monitors your program's console output for patterns that you
