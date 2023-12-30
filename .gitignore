@@ -21,3 +21,5 @@
 go.work
 /oarb
 config.yaml
+
+dist/

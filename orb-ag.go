@@ -24,6 +24,8 @@ import (
 	"time"
 )
 
+var version = "dev"
+
 type Channel struct {
 	Name   string `yaml:"name"`
 	Type   string `yaml:"type"`
@@ -54,7 +56,7 @@ func kafkaConnect(channels []Channel) (map[string]*kgo.Client, error) {
 				kgo.RequiredAcks(kgo.AllISRAcks()),
 				kgo.DisableIdempotentWrite(),
 				kgo.ProducerLinger(50 * time.Millisecond),
-				kgo.RecordRetries(math.MaxInt64),
+				kgo.RecordRetries(math.MaxInt32),
 				kgo.RecordDeliveryTimeout(5 * time.Second),
 				kgo.ProduceRequestTimeout(5 * time.Second),
 				kgo.SeedBrokers(seeds...),
