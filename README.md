@@ -1,6 +1,10 @@
 # orb-ag
 > An 'Observe and Report Buddy' for your SRE toolbox
 
+> [!WARNING]
+> This is a work in progress and far from ready for use.
+> Feedback/Issues/PRs are always welcome.
+
 `orb-ag` monitors your program's console output for patterns that you
 define, and performs actions based on what it detects.  Actions
 include:
@@ -27,11 +31,11 @@ $ orb-ag -c config.yaml java -jar mywebapp.jar
 
 Or, if you are using containers, change...
 ```
-ENTRYPOINT [ "java","-jar", "jar-file-name.jar" ]
+ENTRYPOINT [ "java", "-jar", "jar-file-name.jar" ]
 ```
 ...in your Dockerfile, to...
 ```
-ENTRYPOINT [ "orb-ag", "-c", "config.yaml", "java","-jar", "jar-file-name.jar" ]
+ENTRYPOINT [ "orb-ag", "-c", "config.yaml", "java", "-jar", "jar-file-name.jar" ]
 ```
 
 If `config.yaml` contains the following, you'll get an email every
