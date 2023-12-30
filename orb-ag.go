@@ -15,11 +15,11 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
+  "log"
 	"math"
 	"os"
 	"os/exec"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 )
@@ -101,12 +101,12 @@ type Notification struct {
 func loadYAMLConfig(filename string, config *Config) error {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return fmt.Errorf("error reading config file: %v", err)
+    log.Fatal("orb-ag error: Failed reading config file: ", err)
 	}
 
 	err = yaml.Unmarshal(bytes, config)
 	if err != nil {
-		return fmt.Errorf("error parsing config file: %v", err)
+    log.Fatal("orb-ag error: Failed parsing config file: ", err)
 	}
 
 	return nil
@@ -122,14 +122,14 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int, wg *syn
 				case "notify":
 					err := shoutrrr.Send(notification.Channel.URL, notification.Message)
 					if err != nil {
-						fmt.Printf("OARB ERROR: %s\n", err)
+						log.Println("org-ab warning: failed sending notification: %s\n", err)
 					}
 				case "exec":
 					var stdout bytes.Buffer
 					var stderr bytes.Buffer
 					cmd := exec.Command("bash", "-c", notification.Channel.Shell)
 					cmd.Env = os.Environ()
-					cmd.Env = append(cmd.Env, fmt.Sprintf("OARB_PID=%d", notification.PID))
+					cmd.Env = append(cmd.Env, fmt.Sprintf("ORB_PID=%d", notification.PID))
 					cmd.Stdout = &stdout
 					cmd.Stderr = &stderr
 					cmd.Run()
@@ -137,7 +137,7 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int, wg *syn
 					ctx := context.Background()
 					record := &kgo.Record{Topic: notification.Channel.Topic, Value: []byte(notification.Message)}
 					if err := kafkaClients[notification.Channel.Name].ProduceSync(ctx, record).FirstErr(); err != nil {
-						fmt.Errorf("ORB-AG: kafka record had a produce error: %v\n", err)
+						log.Println("orb-ag warning: kafka record had a produce error: %v\n", err)
 					}
 				}
 			}
@@ -156,8 +156,7 @@ func main() {
 	config := Config{}
 	err := loadYAMLConfig(*configFilePath, &config)
 	if err != nil {
-		fmt.Println("Failed to load config:", err)
-		os.Exit(1)
+		log.Fatal("orb-ag error: Failed to load config: ", err)
 	}
 
 	kafkaConnect(config.Channel)
@@ -166,8 +165,7 @@ func main() {
 	// The remaining arguments after flags are parsed
 	subprocessArgs := flag.Args()
 	if len(subprocessArgs) == 0 {
-		fmt.Println("Error: No command provided to run")
-		os.Exit(1)
+		log.Fatal("orb-ag error: No command provided to run")
 	}
 
 	notificationQueue := make(chan Notification, 100)
@@ -225,8 +223,7 @@ func main() {
 			os.Exit(exitError.ExitCode())
 		} else {
 			// Other error types (not non-zero exit)
-			fmt.Println("Error waiting for Command:", err)
-			os.Exit(1)
+			log.Fatal("orb-ag error: Error waiting for Command:", err)
 		}
 	} else {
 		// Success (exit code 0)
@@ -248,35 +245,6 @@ func monitorOutput(pid int, scanner *bufio.Scanner, compiledSignals []CompiledSi
 		fmt.Println(line)
 	}
 	if err := scanner.Err(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading from pipe: %v\n", err)
+		log.Fatal("orb-ag error: Problem reading from pipe: %v\n", err)
 	}
-}
-
-// loadRegexps loads regexps from a specified file and returns a slice of compiled regexps.
-func loadRegexps(filepath string) ([]*regexp.Regexp, error) {
-	// Read the file content
-	content, err := os.ReadFile(filepath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading regex file: %w", err)
-	}
-
-	// Split the content into lines
-	lines := strings.Split(string(content), "\n")
-
-	// Compile each line into a regexp
-	var regexps []*regexp.Regexp
-	for _, line := range lines {
-		// Skip empty lines
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-
-		re, err := regexp.Compile(line)
-		if err != nil {
-			return nil, fmt.Errorf("error compiling regexp '%s': %w", line, err)
-		}
-		regexps = append(regexps, re)
-	}
-
-	return regexps, nil
 }
