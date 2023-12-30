@@ -35,7 +35,7 @@ ENTRYPOINT [ "orb-ag", "-c", "config.yaml", "java","-jar", "jar-file-name.jar" ]
 ```
 
 If `config.yaml` contains the following, you'll get an email every
-time your application start up, and a thread dump every time you get a
+time your application starts up, and a thread dump every time you get a
 thread pool exhausted warning.
 
 ```
@@ -61,7 +61,19 @@ signals:
 console logs still go to the console, and the exit code for your
 program is passed on through `orb-ag`.
 
-## Action Details
+## Channels and Signals
+
+As you can see from the example above, two key concepts in `orb-ag`
+are channels and signals.  Signals are simply mappings of regular
+expressions to channels.  When `orb-ag` matches one of the signal
+regexps, it invokes the corresponding channel.  And channels define
+what action to take and how.  For instance, in the example above we
+define a `startup-email` channel that defines how to send a message to
+a specific SMTP server.  `orb-ag` config files can define any number
+of channels and signals.  Each signal maps to a single channel.
+However, multiple signals can map to the same channel.
+
+## Channel Details
 
 ### Sending notifications to messaging platforms
 
