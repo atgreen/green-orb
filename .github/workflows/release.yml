@@ -2,6 +2,9 @@
 name: goreleaser
 
 on:
+  workflow_dispatch:
+  release:
+    types: [created]
   push:
     # run only against tags
     tags:
