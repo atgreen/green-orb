@@ -24,3 +24,4 @@ config.yaml
 
 dist/
 /orb-ag
+/secret.yaml
