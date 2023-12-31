@@ -1,4 +1,4 @@
-// orb-ag.go - an Observe and Report Buddy
+// green-orb.go - an Observe and Report Buddy
 //
 // Copyright (C) 2023 Anthony Green - green@moxielogic.com
 //
@@ -88,7 +88,7 @@ func kafkaConnect(channels []Channel) (map[string]*kgo.Client, error) {
 
 			cl, err := kgo.NewClient(opts...)
 			if err != nil {
-				log.Fatal("orb-ag error: failed to create kafka client connection: ", err)
+				log.Fatal("green-orb error: failed to create kafka client connection: ", err)
 			}
 			kafkaClients[channel.Name] = cl
 		}
@@ -101,7 +101,7 @@ func compileSignals(signals []Signal) ([]CompiledSignal, error) {
 	for _, signal := range signals {
 		re, err := regexp.Compile(signal.Regex)
 		if err != nil {
-			log.Fatal("orb-ag error: failed to compile regex \"", signal.Regex, "\": ", err)
+			log.Fatal("green-orb error: failed to compile regex \"", signal.Regex, "\": ", err)
 		}
 		compiledSignals = append(compiledSignals, CompiledSignal{
 			Regex:   re,
@@ -131,12 +131,12 @@ type TemplateData struct {
 func loadYAMLConfig(filename string, config *Config) error {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Fatal("orb-ag error: ", err)
+		log.Fatal("green-orb error: ", err)
 	}
 
 	err = yaml.Unmarshal(bytes, config)
 	if err != nil {
-		log.Fatal("orb-ag error: Failed parsing config file: ", err)
+		log.Fatal("green-orb error: Failed parsing config file: ", err)
 	}
 
 	return nil
@@ -197,7 +197,7 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *s
 					ctx := context.Background()
 					record := &kgo.Record{Topic: notification.Channel.Topic, Value: []byte(notification.Message)}
 					if err := kafkaClients[notification.Channel.Name].ProduceSync(ctx, record).FirstErr(); err != nil {
-						log.Println("orb-ag warning: kafka record had a produce error:", err)
+						log.Println("green-orb warning: kafka record had a produce error:", err)
 					}
 				case "restart":
 					restart = true
@@ -217,17 +217,17 @@ func main() {
 	var numWorkers int64
 
 	cmd := &cli.Command{
-		Name:            "orb-ag",
+		Name:            "green-orb",
 		HideHelpCommand: true,
 		Version:         version,
 		Usage:           "Your observe-and-report buddy",
-		Copyright:       "Copyright (C) 2023  Anthony Green <green@moxielogic.com>.\nDistributed under the terms of the MIT license.\nSee https://github.com/atgreen/orb-ag for details.",
+		Copyright:       "Copyright (C) 2023  Anthony Green <green@moxielogic.com>.\nDistributed under the terms of the MIT license.\nSee https://github.com/atgreen/green-orb for details.",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "config",
-				Value:       "orb-ag.yaml",
+				Value:       "green-orb.yaml",
 				Aliases:     []string{"c"},
-				Usage:       "path to the orb-ag configuration file",
+				Usage:       "path to the green-orb configuration file",
 				Destination: &configFilePath,
 			},
 			&cli.IntFlag{
@@ -255,7 +255,7 @@ func main() {
 			config := Config{}
 			err := loadYAMLConfig(configFilePath, &config)
 			if err != nil {
-				log.Fatal("orb-ag error: Failed to load config: ", err)
+				log.Fatal("green-orb error: Failed to load config: ", err)
 			}
 
 			kafkaConnect(config.Channel)
@@ -264,7 +264,7 @@ func main() {
 			// The remaining arguments after flags are parsed
 			subprocessArgs := cmd.Args().Slice()
 			if len(subprocessArgs) == 0 {
-				log.Fatal("orb-ag error: No command provided to run")
+				log.Fatal("green-orb error: No command provided to run")
 			}
 
 			notificationQueue := make(chan Notification, 100)
@@ -327,7 +327,7 @@ func main() {
 					os.Exit(exitError.ExitCode())
 				} else {
 					// Other error types (not non-zero exit)
-					log.Fatal("orb-ag error: Error waiting for Command:", err)
+					log.Fatal("green-orb error: Error waiting for Command:", err)
 				}
 			} else {
 				// Success (exit code 0)
@@ -359,6 +359,6 @@ func monitorOutput(pid int, scanner *bufio.Scanner, compiledSignals []CompiledSi
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		log.Fatal("orb-ag error: Problem reading from pipe: ", err)
+		log.Fatal("green-orb error: Problem reading from pipe: ", err)
 	}
 }

@@ -1,11 +1,11 @@
-# orb-ag
+# Green ORB
 > An 'Observe and Report Buddy' for your SRE toolbox
 
 > [!WARNING]
 > This is an experimental work in progress.
 > Feedback/Issues/PRs are always welcome.
 
-`orb-ag` monitors your program's console output for patterns that you
+Green ORB monitors your program's console output for patterns that you
 define, and performs actions based on what it detects.  Actions
 include:
 
@@ -20,14 +20,14 @@ include:
   platforms).
 * killing the observed program.
 
-`orb-ag` is very easy to configure and use.  It's just one binary and one yaml
-config file.  Simply preface your program with `orb-ag -c config.yaml`.  For example, instead of:
+Green ORB is very easy to configure and use.  It's just one binary, `orb`, and one yaml
+config file.  Simply preface your program with `orb -c config.yaml`.  For example, instead of:
 ```
 $ java -jar mywebapp.jar
 ```
 ...use...
 ```
-$ orb-ag -c config.yaml java -jar mywebapp.jar
+$ orb -c config.yaml java -jar mywebapp.jar
 ```
 
 Or, if you are using containers, change...
@@ -36,12 +36,12 @@ ENTRYPOINT [ "java", "-jar", "jar-file-name.jar" ]
 ```
 ...in your Dockerfile, to...
 ```
-ENTRYPOINT [ "orb-ag", "-c", "config.yaml", "java", "-jar", "jar-file-name.jar" ]
+ENTRYPOINT [ "orb", "-c", "config.yaml", "java", "-jar", "jar-file-name.jar" ]
 ```
 
 If `config.yaml` contains the following, you'll get an email every
-time your application starts up, and a thread dump every time you get a
-thread pool exhausted warning.
+time your application starts up, and a thread dump every time you get
+a thread pool exhausted warning.
 
 ```
 channels:
@@ -64,19 +64,19 @@ signals:
     channel: "thread-dump"
 ```
 
-`orb-ag` does not interfere with the execution of your program.  All
+`orb` does not interfere with the execution of your program.  All
 console logs still go to the console, and the exit code for your
-program is passed on through `orb-ag`.
+program is passed on through `orb`.
 
 ## Channels and Signals
 
-As you can see from the example above, two key concepts in `orb-ag`
+As you can see from the example above, two key concepts in `orb`
 are channels and signals.  Signals are simply mappings of regular
-expressions to channels.  When `orb-ag` matches one of the signal
+expressions to channels.  When `orb` matches one of the signal
 regexps, it invokes the corresponding channel.  And channels define
 what action to take and how.  For instance, in the example above we
 define a `startup-email` channel that defines how to send a message to
-a specific SMTP server.  `orb-ag` config files can define any number
+a specific SMTP server.  `orb` config files can define any number
 of channels and signals.  Each signal maps to a single channel.
 However, multiple signals can map to the same channel.
 
@@ -89,7 +89,7 @@ platforms.
 
 You must specify a URL and, optionally, a message template.
 
-`orb-ag` uses `shoutrrr` for sending notifications.  Use the following
+`orb` uses `shoutrrr` for sending notifications.  Use the following
 URL formats for these different services.  Additional details are
 available from the [`shoutrrr`
 documentation](https://containrrr.dev/shoutrrr/v0.8/services/overview/).
@@ -178,19 +178,19 @@ examination.
 
 The channel type `restart` is for restarting your observed process.
 
-The `orb-ag` process will run continuously, but it will force the
+The `orb` process will run continuously, but it will force the
 observed process to terminate and then restart.
 
 ### Killing your process
 
 The channel type `kill` is for killing your observed process.
 
-The `orb-ag` process will exit.
+The `orb` process will exit.
 
 ## Author and License
 
-`orb-ag` was written by [Anthony
+`orb` was written by [Anthony
 Green](https://github.com/atgreen), and is distributed under the terms
 of the MIT License.  See
-[LICENSE](https://raw.githubusercontent.com/atgreen/orb-ag/main/LICENSE)
+[LICENSE](https://raw.githubusercontent.com/atgreen/green-orb/main/LICENSE)
 for details.

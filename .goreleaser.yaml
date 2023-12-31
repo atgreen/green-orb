@@ -8,7 +8,7 @@
 
 version: 1
 
-project_name: orb-ag
+project_name: green-orb
 
 before:
   hooks:
