@@ -1,24 +1,12 @@
 ---
 channels:
 
-  - name: "slack_alerts"
-    type: "sender"
-    url:  "generic:localhost:5000/?contentType=json"
-
-  - name: "http_webhook"
-    type: "sender"
-    url:  "ifttt:/dfgdfgd/dfg/dfg/"
-
-  - name: "restart!"
-    type: "restart"
-
   - name: "jdump"
     type: "exec"
     shell: |
-      jdump $OARB_PID | gzip -9 > /tmp/jump-`date`.gz
+      jdump $OAB_PID | gzip -9 > /tmp/jump-$(date).gz
 
 signals:
 
-  - regex: "go"
-    channel: "slack_alerts"
-    backoff: 5s
+  - regex: "rror"
+    channel: "jdump"
