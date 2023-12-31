@@ -129,7 +129,7 @@ the message.  If a `template` is specified, then the template is
 processed with the same data as above before sending.
 
 As an example, here's a channel that sends an email containing json
-data, and the observed PID is in the email subject line:
+data with the observed PID in the email subject line:
 
 ```
   - name: "email-on-startup"
