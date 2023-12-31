@@ -3,14 +3,10 @@
 # Green Orb
 > An 'Observe and Report Buddy' for your SRE toolbox
 
-> [!WARNING]
-> This is an experimental work in progress.
-> Feedback/Issues/PRs are always welcome.
-
 ## Introduction
 
 Green Orb monitors your program's console output for patterns that you
-define and performs actions based on what it detects. It serves as a
+define, and performs actions based on what it detects. It serves as a
 versatile assistant, taking care of routine but critical monitoring
 tasks. This tool is especially useful for System Reliability Engineers
 (SREs) looking to automate and respond to the vital signs of their
@@ -95,6 +91,11 @@ to a single channel.  However, multiple signals can map to the same
 channel.
 
 ## Channel Details
+
+All channel definitions must have a `name` and a `type`.  Signals
+reference channels by `name`.  The channel's `type` must be one of
+`notify`, `kafka`, `exec`, `restart` or `kill`.  These types are
+described below.
 
 ### Sending notifications to messaging platforms
 
@@ -200,6 +201,12 @@ observed process to terminate and then restart.
 The channel type `kill` is for killing your observed process.
 
 The `orb` process will exit.
+
+## Contributing
+
+Green Orb is Free Software, and any and all contributions are welcome!
+Please use github's Issue tracker and Pull Request systems for
+feedback and improvements.
 
 ## Author and License
 
