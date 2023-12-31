@@ -9,10 +9,10 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"flag"
 	"fmt"
 	"github.com/containrrr/shoutrrr"
 	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/urfave/cli/v3"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"log"
@@ -104,7 +104,7 @@ type Notification struct {
 func loadYAMLConfig(filename string, config *Config) error {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Fatal("orb-ag error: Failed reading config file: ", err)
+		log.Fatal("orb-ag error: ", err)
 	}
 
 	err = yaml.Unmarshal(bytes, config)
@@ -156,92 +156,117 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int, wg *syn
 
 func main() {
 
-	// Define a string flag for the configuration file
-	configFilePath := flag.String("c", "", "Path to the oar configuration file")
+	var configFilePath string
 
-	// Parse the flags
-	flag.Parse()
+	cmd := &cli.Command{
+		Name:            "orb-ag",
+		HideHelpCommand: true,
+		Version:         version,
+		Usage:           "Your observe-and-report buddy",
+		Copyright:       "Copyright (C) 2023  Anthony Green <green@moxielogic.com>.\nDistributed under the terms of the MIT license.\nSee https://github.com/atgreen/orb-ag for details.",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "config",
+				Value:       "orb-ag.yaml",
+				Aliases:     []string{"c"},
+				Usage:       "path to the orb-ag configuration file",
+				Destination: &configFilePath,
+			},
+		},
+		Action: func(ctx context.Context, cmd *cli.Command) error {
 
-	config := Config{}
-	err := loadYAMLConfig(*configFilePath, &config)
-	if err != nil {
-		log.Fatal("orb-ag error: Failed to load config: ", err)
+			if cmd.NArg() == 0 {
+				// No arguments provided, show help text
+				cli.ShowAppHelp(cmd)
+				return nil
+			}
+
+			config := Config{}
+			err := loadYAMLConfig(configFilePath, &config)
+			if err != nil {
+				log.Fatal("orb-ag error: Failed to load config: ", err)
+			}
+
+			kafkaConnect(config.Channel)
+			compiledSignals, _ := compileSignals(config.Signal)
+
+			// The remaining arguments after flags are parsed
+			subprocessArgs := cmd.Args().Slice()
+			if len(subprocessArgs) == 0 {
+				log.Fatal("orb-ag error: No command provided to run")
+			}
+
+			notificationQueue := make(chan Notification, 100)
+
+			// Use a WaitGroup to wait for the reading goroutines to finish
+			var wg sync.WaitGroup
+			var nwg sync.WaitGroup
+
+			startWorkers(notificationQueue, 5, &nwg)
+
+			channelMap := make(map[string]Channel)
+			for _, ch := range config.Channel {
+				channelMap[ch.Name] = ch
+			}
+
+			for restart {
+
+				restart = false
+
+				// Prepare to run the subprocess
+				observed_cmd = exec.Command(subprocessArgs[0], subprocessArgs[1:]...)
+				// Rest of your code to handle the subprocess...
+				stdout, _ := observed_cmd.StdoutPipe()
+				stderr, _ := observed_cmd.StderrPipe()
+
+				if err := observed_cmd.Start(); err != nil {
+					// Handle error
+				}
+
+				pid := observed_cmd.Process.Pid
+
+				// Increment WaitGroup and start reading stdout
+				wg.Add(2)
+				go func() {
+					defer wg.Done()
+					monitorOutput(pid, bufio.NewScanner(stdout), compiledSignals, notificationQueue, channelMap)
+				}()
+				go func() {
+					defer wg.Done()
+					monitorOutput(pid, bufio.NewScanner(stderr), compiledSignals, notificationQueue, channelMap)
+				}()
+
+				// Wait for all reading to be complete
+				wg.Wait()
+
+				// Wait for the command to finish
+				err = observed_cmd.Wait()
+			}
+
+			close(notificationQueue)
+
+			// Wait for all reading to be complete
+			nwg.Wait()
+
+			// Handle exit status
+			if err != nil {
+				// observed_cmd.Wait() returns an error if the command exits non-zero
+				if exitError, ok := err.(*exec.ExitError); ok {
+					// Get the command's exit code
+					os.Exit(exitError.ExitCode())
+				} else {
+					// Other error types (not non-zero exit)
+					log.Fatal("orb-ag error: Error waiting for Command:", err)
+				}
+			} else {
+				// Success (exit code 0)
+				os.Exit(0)
+			}
+			return nil
+		},
 	}
-
-	kafkaConnect(config.Channel)
-	compiledSignals, _ := compileSignals(config.Signal)
-
-	// The remaining arguments after flags are parsed
-	subprocessArgs := flag.Args()
-	if len(subprocessArgs) == 0 {
-		log.Fatal("orb-ag error: No command provided to run")
-	}
-
-	notificationQueue := make(chan Notification, 100)
-
-	// Use a WaitGroup to wait for the reading goroutines to finish
-	var wg sync.WaitGroup
-	var nwg sync.WaitGroup
-
-	startWorkers(notificationQueue, 5, &nwg)
-
-	channelMap := make(map[string]Channel)
-	for _, ch := range config.Channel {
-		channelMap[ch.Name] = ch
-	}
-
-	for restart {
-
-		restart = false
-
-		// Prepare to run the subprocess
-		observed_cmd = exec.Command(subprocessArgs[0], subprocessArgs[1:]...)
-		// Rest of your code to handle the subprocess...
-		stdout, _ := observed_cmd.StdoutPipe()
-		stderr, _ := observed_cmd.StderrPipe()
-
-		if err := observed_cmd.Start(); err != nil {
-			// Handle error
-		}
-
-		pid := observed_cmd.Process.Pid
-
-		// Increment WaitGroup and start reading stdout
-		wg.Add(2)
-		go func() {
-			defer wg.Done()
-			monitorOutput(pid, bufio.NewScanner(stdout), compiledSignals, notificationQueue, channelMap)
-		}()
-		go func() {
-			defer wg.Done()
-			monitorOutput(pid, bufio.NewScanner(stderr), compiledSignals, notificationQueue, channelMap)
-		}()
-
-		// Wait for all reading to be complete
-		wg.Wait()
-
-		// Wait for the command to finish
-		err = observed_cmd.Wait()
-	}
-
-	close(notificationQueue)
-
-	// Wait for all reading to be complete
-	nwg.Wait()
-
-	// Handle exit status
-	if err != nil {
-		// cmd.Wait() returns an error if the command exits non-zero
-		if exitError, ok := err.(*exec.ExitError); ok {
-			// Get the command's exit code
-			os.Exit(exitError.ExitCode())
-		} else {
-			// Other error types (not non-zero exit)
-			log.Fatal("orb-ag error: Error waiting for Command:", err)
-		}
-	} else {
-		// Success (exit code 0)
-		os.Exit(0)
+	if err := cmd.Run(context.Background(), os.Args); err != nil {
+		log.Fatal(err)
 	}
 }
 

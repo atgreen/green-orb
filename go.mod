@@ -16,6 +16,8 @@ require (
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/pierrec/lz4/v4 v4.1.19 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
+	github.com/urfave/cli/v3 v3.0.0-alpha8 // indirect
+	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
