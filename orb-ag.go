@@ -41,6 +41,7 @@ import (
 	"regexp"
 	"sync"
 	"syscall"
+	"text/template"
 	"time"
 )
 
@@ -49,12 +50,13 @@ var restart bool = true
 var observed_cmd *exec.Cmd
 
 type Channel struct {
-	Name   string `yaml:"name"`
-	Type   string `yaml:"type"`
-	URL    string `yaml:"url"`
-	Topic  string `yaml:"topic"`
-	Broker string `yaml:"broker"`
-	Shell  string `yaml:"shell"`
+	Name     string `yaml:"name"`
+	Type     string `yaml:"type"`
+	URL      string `yaml:"url"`
+	Template string `yaml:"template"`
+	Topic    string `yaml:"topic"`
+	Broker   string `yaml:"broker"`
+	Shell    string `yaml:"shell"`
 }
 
 type Signal struct {
@@ -120,6 +122,12 @@ type Notification struct {
 	Message string
 }
 
+type TemplateData struct {
+	PID       int
+	Logline   string
+	Timestamp string
+}
+
 func loadYAMLConfig(filename string, config *Config) error {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -135,14 +143,44 @@ func loadYAMLConfig(filename string, config *Config) error {
 }
 
 func startWorkers(notificationQueue <-chan Notification, numWorkers int, wg *sync.WaitGroup) {
+	var messageString string
+
 	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
 			for notification := range notificationQueue {
+				td := TemplateData{PID: notification.PID,
+					Logline:   notification.Message,
+					Timestamp: time.Now().Format(time.RFC3339)}
 				switch notification.Channel.Type {
 				case "notify":
-					err := shoutrrr.Send(notification.Channel.URL, notification.Message)
+					tmpl, err := template.New("url").Parse(notification.Channel.URL)
+					if err != nil {
+						log.Fatal("org-ab error: can't parse URL template: ", err)
+					}
+					var buffer bytes.Buffer
+					err = tmpl.Execute(&buffer, td)
+					if err != nil {
+						log.Fatal("org-ab error: can't execute URL template: ", err)
+					}
+					urlString := buffer.String()
+					if notification.Channel.Template != "" {
+						tmpl, err := template.New("msg").Parse(notification.Channel.Template)
+						if err != nil {
+							log.Fatal("org-ab error: can't parse template: ", err)
+						}
+						var buffer bytes.Buffer
+						err = tmpl.Execute(&buffer, td)
+						if err != nil {
+							log.Fatal("org-ab error: can't execute URL template: ", err)
+						}
+						messageString = buffer.String()
+					} else {
+						messageString = notification.Message
+					}
+
+					err = shoutrrr.Send(urlString, messageString)
 					if err != nil {
 						log.Println("org-ab warning: failed sending notification: ", err)
 					}

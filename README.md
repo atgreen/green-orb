@@ -87,6 +87,8 @@ However, multiple signals can map to the same channel.
 The channel type `notify` is for sending messages to popular messaging
 platforms.
 
+You must specify a URL and, optionally, a message template.
+
 `orb-ag` uses `shoutrrr` for sending notifications.  Use the following
 URL formats for these different services.  Additional details are
 available from the [`shoutrrr`
@@ -113,7 +115,29 @@ documentation](https://containrrr.dev/shoutrrr/v0.8/services/overview/).
 | Telegram    | `telegram://token@telegram?chats=@channel-1[,chat-id-1,...]`                               |
 | Zulip Chat  | `zulip://bot-mail:bot-key@zulip-domain/?stream=name-or-id&topic=name`                     |
 
-The URL format for generic webhooks is described at
+URLs are actually go templates that are processed before use.  Data
+that you can provide to the template engine includes:
+- `.Timestamp` : the RFC3339 formatted timestamp for the matching log entry
+- `.PID`: the process ID for the observed process
+- `.Logline`: the matching log line
+
+Similarly, the message sent may also be a template.  If no `template`
+is specified in the channel definition, then the logline is used as
+the message.  If a `template` is specified, then the template is
+processed with the same data as above before sending.
+
+As an example, here's a channel that sends an email containing json
+data, and the observed PID is in the email subject line:
+
+```
+  - name: "email-on-startup"
+    type: "notify"
+    url:  "smtp://EMAIL@gmail.com:PASSWORD@smtp.gmail.com:587/?from=EMAIL@gmail.com&to=EMAIL@gmail.com&subject=Starting%20process%20{{.PID}}!"
+    template: "{ \"timestamp\": \"{{.Timestamp}}\", \"message\": \"{{.Logline}}\" }"
+```
+
+Generic webhooks and handled specially by `shoutrrr`.  Their URL
+format is described at
 [https://containrrr.dev/shoutrrr/v0.8/services/generic/](https://containrrr.dev/shoutrrr/v0.8/services/generic/).
 
 ### Sending Kafka messages
