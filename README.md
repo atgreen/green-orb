@@ -79,15 +79,20 @@ program is passed on through `orb`.
 
 ## Channels and Signals
 
-As you can see from the example above, two key concepts in `orb`
-are channels and signals.  Signals are simply mappings of regular
-expressions to channels.  When `orb` matches one of the signal
-regexps, it invokes the corresponding channel.  And channels define
-what action to take and how.  For instance, in the example above we
-define a `startup-email` channel that defines how to send a message to
-a specific SMTP server.  `orb` config files can define any number
-of channels and signals.  Each signal maps to a single channel.
-However, multiple signals can map to the same channel.
+In Green Orb, "channels" and "signals" are foundational concepts:
+
+- Signals: Mappings of regular expressions to channels. When a
+  signal's regex matches a log entry, the corresponding channel is
+  invoked.
+
+- Channels: Define the action to take and how. For example, the above
+  `startup-email` channel defines how to send a message to a specific
+  SMTP server.
+
+Channels and signals are defined in your `orb` config file.  A config
+file can define any number of channels and signals.  Each signal maps
+to a single channel.  However, multiple signals can map to the same
+channel.
 
 ## Channel Details
 
