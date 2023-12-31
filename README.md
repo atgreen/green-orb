@@ -1,11 +1,11 @@
-# Green ORB
+# Green Orb
 > An 'Observe and Report Buddy' for your SRE toolbox
 
 > [!WARNING]
 > This is an experimental work in progress.
 > Feedback/Issues/PRs are always welcome.
 
-Green ORB monitors your program's console output for patterns that you
+Green Orb monitors your program's console output for patterns that you
 define, and performs actions based on what it detects.  Actions
 include:
 
@@ -20,7 +20,7 @@ include:
   platforms).
 * killing the observed program.
 
-Green ORB is very easy to configure and use.  It's just one binary, `orb`, and one yaml
+Green Orb is very easy to configure and use.  It's just one binary, `orb`, and one yaml
 config file.  Simply preface your program with `orb -c config.yaml`.  For example, instead of:
 ```
 $ java -jar mywebapp.jar
@@ -189,7 +189,7 @@ The `orb` process will exit.
 
 ## Author and License
 
-`orb` was written by [Anthony
+`green-orb` was written by [Anthony
 Green](https://github.com/atgreen), and is distributed under the terms
 of the MIT License.  See
 [LICENSE](https://raw.githubusercontent.com/atgreen/green-orb/main/LICENSE)
