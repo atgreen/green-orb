@@ -142,10 +142,10 @@ func loadYAMLConfig(filename string, config *Config) error {
 	return nil
 }
 
-func startWorkers(notificationQueue <-chan Notification, numWorkers int, wg *sync.WaitGroup) {
+func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *sync.WaitGroup) {
 	var messageString string
 
-	for i := 0; i < numWorkers; i++ {
+	for i := 0; i < int(numWorkers); i++ {
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
@@ -214,6 +214,7 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int, wg *syn
 func main() {
 
 	var configFilePath string
+	var numWorkers int64
 
 	cmd := &cli.Command{
 		Name:            "orb-ag",
@@ -228,6 +229,19 @@ func main() {
 				Aliases:     []string{"c"},
 				Usage:       "path to the orb-ag configuration file",
 				Destination: &configFilePath,
+			},
+			&cli.IntFlag{
+				Name:    "workers",
+				Value:   5,
+				Aliases: []string{"w"},
+				Usage:   "number of reporting workers",
+				Action: func(ctx context.Context, cmd *cli.Command, v int64) error {
+					if (v > 100) || (v < 1) {
+						return fmt.Errorf("Flag workers value %v out of range [1-100]", v)
+					}
+					return nil
+				},
+				Destination: &numWorkers,
 			},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
@@ -259,7 +273,7 @@ func main() {
 			var wg sync.WaitGroup
 			var nwg sync.WaitGroup
 
-			startWorkers(notificationQueue, 5, &nwg)
+			startWorkers(notificationQueue, numWorkers, &nwg)
 
 			channelMap := make(map[string]Channel)
 			for _, ch := range config.Channel {
