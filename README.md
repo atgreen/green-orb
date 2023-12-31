@@ -191,7 +191,7 @@ The `orb` process will exit.
 
 ## Author and License
 
-`green-orb` was written by [Anthony
+Green Orb was written by [Anthony
 Green](https://github.com/atgreen), and is distributed under the terms
 of the MIT License.  See
 [LICENSE](https://raw.githubusercontent.com/atgreen/green-orb/main/LICENSE)
