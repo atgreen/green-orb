@@ -48,7 +48,7 @@ builds:
 
 archives:
   - format: tar.gz
-    name_template: "{{ .Binary }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    name_template: "green-orb-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
     allow_different_binary_count: true
     format_overrides:
       - goos: windows
