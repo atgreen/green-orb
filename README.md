@@ -5,7 +5,7 @@
 
 ## Introduction
 
-Green Orb monitors your program's console output for patterns that you
+Green Orb monitors your application's console output for patterns that you
 define, and performs actions based on what it detects. It serves as a
 versatile assistant, taking care of routine but critical monitoring
 tasks. This tool is especially useful for SREs looking to automate and
@@ -19,13 +19,13 @@ With Green Orb, you can:
 - **Trigger Webhooks**: Integrate with services like Ansible Automation Platform through webhooks for seamless automation.
 - **Publish to Kafka**: Send important alerts or logs directly to a Kafka topic for real-time processing.
 - **Execute Commands**: Run shell commands automatically, allowing actions like capturing thread dumps of the observed process.
-- **Manage Process**: Restart or kill the observed program to maintain desired state or recover from issues.
+- **Manage Process**: Restart or kill the observed process to maintain desired state or recover from issues.
 
 ## Quick Start
 
 Green Orb is easy to configure and use. It's distributed as a single binary, `orb`, and requires just one YAML configuration file.
 
-Simply preface your program with `orb -c config.yaml`.  For example, instead of:
+Simply preface your application with `orb -c config.yaml`.  For example, instead of:
 ```
 $ java -jar mywebapp.jar
 ```
@@ -68,9 +68,9 @@ signals:
     channel: "thread-dump"
 ```
 
-`orb` does not interfere with the execution of your program.  All
+`orb` does not interfere with the execution of your application.  All
 console logs still go to the console, and the exit code for your
-program is passed on through `orb`.
+application is passed on through `orb`.
 
 ## Channels and Signals
 
