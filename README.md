@@ -7,23 +7,30 @@
 > This is an experimental work in progress.
 > Feedback/Issues/PRs are always welcome.
 
+## Introduction
+
 Green Orb monitors your program's console output for patterns that you
-define, and performs actions based on what it detects.  Actions
-include:
+define and performs actions based on what it detects. It serves as a
+versatile assistant, taking care of routine but critical monitoring
+tasks. This tool is especially useful for System Reliability Engineers
+(SREs) looking to automate and respond to the vital signs of their
+systems.
 
-* sending notifications through one of a number of popular messaging
-  services, including slack, email, discord, and many more.
-* sending webhooks for processing by services like the Ansible
-  Automation Platform.
-* sending messages on a kafka topic
-* executing arbitrary shell commands, allowing you to, for instance,
-  capture thread dumps of the process being observed.
-* restarting the observed program (avoiding pod restarts on k8s
-  platforms).
-* killing the observed program.
+## Features
 
-Green Orb is very easy to configure and use.  It's just one binary, `orb`, and one yaml
-config file.  Simply preface your program with `orb -c config.yaml`.  For example, instead of:
+With Green Orb, you can:
+
+- **Send Notifications**: Utilize popular messaging services like Slack, Email, Discord, and more to keep your team updated.
+- **Trigger Webhooks**: Integrate with services like Ansible Automation Platform through webhooks for seamless automation.
+- **Publish to Kafka**: Send important alerts or logs directly to a Kafka topic for real-time processing.
+- **Execute Commands**: Run shell commands automatically, allowing actions like capturing thread dumps of the observed process.
+- **Manage Process**: Restart or kill the observed program to maintain desired state or recover from issues.
+
+## Quick Start
+
+Green Orb is easy to configure and use. It's distributed as a single binary, `orb`, and requires just one YAML configuration file.
+
+Simply preface your program with `orb -c config.yaml`.  For example, instead of:
 ```
 $ java -jar mywebapp.jar
 ```
