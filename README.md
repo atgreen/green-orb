@@ -8,9 +8,8 @@
 Green Orb monitors your program's console output for patterns that you
 define, and performs actions based on what it detects. It serves as a
 versatile assistant, taking care of routine but critical monitoring
-tasks. This tool is especially useful for System Reliability Engineers
-(SREs) looking to automate and respond to the vital signs of their
-systems.
+tasks. This tool is especially useful for SREs looking to automate and
+respond to the vital signs of their systems.
 
 ## Features
 
