@@ -47,7 +47,7 @@ builds:
 
 archives:
   - format: tar.gz
-    name_template: "{{ .Binary }}"
+    name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     allow_different_binary_count: true
     format_overrides:
       - goos: windows
