@@ -1,4 +1,4 @@
-<img src="images/green-orb.png" align="right" />
+<img src="images/green-orb.png" align="right" width="200" height="200" />
 # Green Orb
 > An 'Observe and Report Buddy' for your SRE toolbox
 
