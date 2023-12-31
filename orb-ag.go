@@ -125,7 +125,7 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int, wg *syn
 				case "notify":
 					err := shoutrrr.Send(notification.Channel.URL, notification.Message)
 					if err != nil {
-						log.Println("org-ab warning: failed sending notification: %s\n", err)
+						log.Println("org-ab warning: failed sending notification: ", err)
 					}
 				case "exec":
 					var stdout bytes.Buffer
@@ -259,6 +259,6 @@ func monitorOutput(pid int, scanner *bufio.Scanner, compiledSignals []CompiledSi
 		fmt.Println(line)
 	}
 	if err := scanner.Err(); err != nil {
-		log.Fatal("orb-ag error: Problem reading from pipe: %v\n", err)
+		log.Fatal("orb-ag error: Problem reading from pipe: ", err)
 	}
 }
