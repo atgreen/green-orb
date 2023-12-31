@@ -19,6 +19,7 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
+      - uses: anchore/sbom-action@v0
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
