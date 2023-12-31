@@ -15,16 +15,19 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
-  "log"
+	"log"
 	"math"
 	"os"
 	"os/exec"
 	"regexp"
 	"sync"
+	"syscall"
 	"time"
 )
 
 var version = "dev"
+var restart bool = true
+var observed_cmd *exec.Cmd
 
 type Channel struct {
 	Name   string `yaml:"name"`
@@ -64,7 +67,7 @@ func kafkaConnect(channels []Channel) (map[string]*kgo.Client, error) {
 
 			cl, err := kgo.NewClient(opts...)
 			if err != nil {
-				return nil, fmt.Errorf("ORB-AG: error creating kafka client connection to %s", channel.Broker)
+				log.Fatal("orb-ag error: failed to create kafka client connection: ", err)
 			}
 			kafkaClients[channel.Name] = cl
 		}
@@ -77,7 +80,7 @@ func compileSignals(signals []Signal) ([]CompiledSignal, error) {
 	for _, signal := range signals {
 		re, err := regexp.Compile(signal.Regex)
 		if err != nil {
-			return nil, fmt.Errorf("failed to compile regex %v: %v", signal.Regex, err)
+			log.Fatal("orb-ag error: failed to compile regex \"", signal.Regex, "\": ", err)
 		}
 		compiledSignals = append(compiledSignals, CompiledSignal{
 			Regex:   re,
@@ -101,12 +104,12 @@ type Notification struct {
 func loadYAMLConfig(filename string, config *Config) error {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
-    log.Fatal("orb-ag error: Failed reading config file: ", err)
+		log.Fatal("orb-ag error: Failed reading config file: ", err)
 	}
 
 	err = yaml.Unmarshal(bytes, config)
 	if err != nil {
-    log.Fatal("orb-ag error: Failed parsing config file: ", err)
+		log.Fatal("orb-ag error: Failed parsing config file: ", err)
 	}
 
 	return nil
@@ -137,8 +140,14 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int, wg *syn
 					ctx := context.Background()
 					record := &kgo.Record{Topic: notification.Channel.Topic, Value: []byte(notification.Message)}
 					if err := kafkaClients[notification.Channel.Name].ProduceSync(ctx, record).FirstErr(); err != nil {
-						log.Println("orb-ag warning: kafka record had a produce error: %v\n", err)
+						log.Println("orb-ag warning: kafka record had a produce error:", err)
 					}
+				case "restart":
+					restart = true
+					observed_cmd.Process.Signal(syscall.SIGTERM)
+				case "kill":
+					restart = false
+					observed_cmd.Process.Signal(syscall.SIGTERM)
 				}
 			}
 		}(i)
@@ -181,34 +190,39 @@ func main() {
 		channelMap[ch.Name] = ch
 	}
 
-	// Prepare to run the subprocess
-	cmd := exec.Command(subprocessArgs[0], subprocessArgs[1:]...)
-	// Rest of your code to handle the subprocess...
-	stdout, _ := cmd.StdoutPipe()
-	stderr, _ := cmd.StderrPipe()
+	for restart {
 
-	if err := cmd.Start(); err != nil {
-		// Handle error
+		restart = false
+
+		// Prepare to run the subprocess
+		observed_cmd = exec.Command(subprocessArgs[0], subprocessArgs[1:]...)
+		// Rest of your code to handle the subprocess...
+		stdout, _ := observed_cmd.StdoutPipe()
+		stderr, _ := observed_cmd.StderrPipe()
+
+		if err := observed_cmd.Start(); err != nil {
+			// Handle error
+		}
+
+		pid := observed_cmd.Process.Pid
+
+		// Increment WaitGroup and start reading stdout
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			monitorOutput(pid, bufio.NewScanner(stdout), compiledSignals, notificationQueue, channelMap)
+		}()
+		go func() {
+			defer wg.Done()
+			monitorOutput(pid, bufio.NewScanner(stderr), compiledSignals, notificationQueue, channelMap)
+		}()
+
+		// Wait for all reading to be complete
+		wg.Wait()
+
+		// Wait for the command to finish
+		err = observed_cmd.Wait()
 	}
-
-	pid := cmd.Process.Pid
-
-	// Increment WaitGroup and start reading stdout
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		monitorOutput(pid, bufio.NewScanner(stdout), compiledSignals, notificationQueue, channelMap)
-	}()
-	go func() {
-		defer wg.Done()
-		monitorOutput(pid, bufio.NewScanner(stderr), compiledSignals, notificationQueue, channelMap)
-	}()
-
-	// Wait for all reading to be complete
-	wg.Wait()
-
-	// Wait for the command to finish
-	err = cmd.Wait()
 
 	close(notificationQueue)
 

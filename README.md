@@ -16,8 +16,9 @@ include:
 * sending messages on a kafka topic
 * executing arbitrary shell commands, allowing you to, for instance,
   capture thread dumps of the process being observed.
-* restarting the program being observed (avoiding pod restarts on k8s
+* restarting the observed program (avoiding pod restarts on k8s
   platforms).
+* killing the observed program.
 
 `orb-ag` is very easy to configure and use.  It's just one binary and one yaml
 config file.  Simply preface your program with `orb-ag -c config.yaml`.  For example, instead of:
@@ -156,7 +157,11 @@ The channel type `restart` is for restarting your observed process.
 The `orb-ag` process will run continuously, but it will force the
 observed process to terminate and then restart.
 
-[TBD]
+### Killing your process
+
+The channel type `kill` is for killing your observed process.
+
+The `orb-ag` process will exit.
 
 ## Author and License
 
