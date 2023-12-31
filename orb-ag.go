@@ -229,11 +229,11 @@ func main() {
 				wg.Add(2)
 				go func() {
 					defer wg.Done()
-					monitorOutput(pid, bufio.NewScanner(stdout), compiledSignals, notificationQueue, channelMap)
+					monitorOutput(pid, bufio.NewScanner(stdout), compiledSignals, notificationQueue, channelMap, false)
 				}()
 				go func() {
 					defer wg.Done()
-					monitorOutput(pid, bufio.NewScanner(stderr), compiledSignals, notificationQueue, channelMap)
+					monitorOutput(pid, bufio.NewScanner(stderr), compiledSignals, notificationQueue, channelMap, true)
 				}()
 
 				// Wait for all reading to be complete
@@ -270,7 +270,7 @@ func main() {
 	}
 }
 
-func monitorOutput(pid int, scanner *bufio.Scanner, compiledSignals []CompiledSignal, notificationQueue chan Notification, channelMap map[string]Channel) {
+func monitorOutput(pid int, scanner *bufio.Scanner, compiledSignals []CompiledSignal, notificationQueue chan Notification, channelMap map[string]Channel, is_stderr bool) {
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -281,7 +281,11 @@ func monitorOutput(pid int, scanner *bufio.Scanner, compiledSignals []CompiledSi
 			}
 		}
 
-		fmt.Println(line)
+    if (is_stderr) {
+      fmt.Fprintln(os.Stderr, line)
+    } else {
+      fmt.Println(line)
+    }
 	}
 	if err := scanner.Err(); err != nil {
 		log.Fatal("orb-ag error: Problem reading from pipe: ", err)
