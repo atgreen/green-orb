@@ -13,7 +13,7 @@ runs your application as a subprocess, where it can monitor all
 console output, making it particularly useful in containerized
 environments. Green Orb acts as a proactive assistant, handling
 essential monitoring tasks and enabling SREs to automate responses to
-crucial system events effectively.
+critical system events effectively.
 
 ## Features
 
