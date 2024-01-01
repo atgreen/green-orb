@@ -26,13 +26,15 @@ With Green Orb, you can:
 
 Green Orb is easy to configure and use. It's distributed as a single binary, `orb`, and requires just one YAML configuration file.
 
-Simply preface your application with `orb -c config.yaml`.  For example, instead of:
+Simply preface your application with `orb` and customize your
+`green-orb.yaml` file to enable its special powers.  For example,
+instead of:
 ```
 $ java -jar mywebapp.jar
 ```
 ...use...
 ```
-$ orb -c config.yaml java -jar mywebapp.jar
+$ orb java -jar mywebapp.jar
 ```
 
 Or, if you are using containers, change...
@@ -41,12 +43,16 @@ ENTRYPOINT [ "java", "-jar", "jar-file-name.jar" ]
 ```
 ...in your Dockerfile, to...
 ```
-ENTRYPOINT [ "orb", "-c", "config.yaml", "java", "-jar", "jar-file-name.jar" ]
+ENTRYPOINT [ "orb", "java", "-jar", "jar-file-name.jar" ]
 ```
 
-If `config.yaml` contains the following, you'll get an email every
-time your application starts up, and a thread dump every time you get
-a thread pool exhausted warning.
+This assumes `green-orb.yaml` is in the current directory.  Use the
+`-c` flag to point it elsewhere.
+
+The config file tells `orb` what to watch for, and what to do.  For
+instance, if it contains the following, you'll get an email every time
+your application starts up, and a thread dump every time you get a
+thread pool exhausted warning.
 
 ```
 channels:
