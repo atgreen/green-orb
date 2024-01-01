@@ -5,12 +5,15 @@
 
 ## Introduction
 
-Green Orb monitors your application's console output for patterns that
-you define, and performs actions based on what it detects. It serves
-as a versatile assistant, taking care of routine but critical
-monitoring tasks. Green Orb is lightweight and suitable for use with
-containerized applications.  It's especially useful for SREs looking
-to automate and respond to the vital signs of their systems.
+Green Orb is a lightweight monitoring tool that enhances your
+application's reliability by observing its console output for specific
+patterns and executing predefined actions in response. Designed to
+integrate seamlessly, it's deployed as a single executable binary that
+runs your application as a subprocess, where it can monitor all
+console output, making it particularly useful in containerized
+environments. Green Orb acts as a proactive assistant, handling
+essential monitoring tasks and enabling SREs to automate responses to
+crucial system events effectively.
 
 ## Features
 
