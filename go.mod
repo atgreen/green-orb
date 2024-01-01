@@ -1,4 +1,4 @@
-module orb-ag
+module orb
 
 go 1.21.5
 
