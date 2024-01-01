@@ -39,6 +39,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+  "strings"
 	"sync"
 	"syscall"
 	"text/template"
@@ -126,6 +127,7 @@ type TemplateData struct {
 	PID       int
 	Logline   string
 	Timestamp string
+  Env       map[string]string
 }
 
 func loadYAMLConfig(filename string, config *Config) error {
@@ -142,6 +144,17 @@ func loadYAMLConfig(filename string, config *Config) error {
 	return nil
 }
 
+func envToMap() (map[string]string, error) {
+  envMap := make(map[string]string)
+  var err error
+
+  for _, v := range os.Environ() {
+    split_v := strings.Split(v, "=")
+    envMap[split_v[0]] = strings.Join(split_v[1:], "=")
+  }
+  return envMap, err
+}
+
 func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *sync.WaitGroup) {
 	var messageString string
 
@@ -150,8 +163,10 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *s
 		go func(workerID int) {
 			defer wg.Done()
 			for notification := range notificationQueue {
+        env, _ := envToMap()
 				td := TemplateData{PID: notification.PID,
 					Logline:   notification.Message,
+          Env: env,
 					Timestamp: time.Now().Format(time.RFC3339)}
 				switch notification.Channel.Type {
 				case "notify":

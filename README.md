@@ -131,11 +131,12 @@ documentation](https://containrrr.dev/shoutrrr/v0.8/services/overview/).
 | Zulip Chat  | `zulip://bot-mail:bot-key@zulip-domain/?stream=name-or-id&topic=name`                     |
 
 URLs are actually [go templates](https://pkg.go.dev/text/template)
-that are processed before use.  Data that you can provide to the
+that are processed before use.  Data that you can access from the
 template engine includes:
 - `.Timestamp` : the RFC3339 formatted timestamp for the matching log entry
 - `.PID`: the process ID for the observed process
 - `.Logline`: the matching log line
+- `.Env`: a map to access environment variables (eg. `{{.Env.USER_PASSWORD}}`)
 
 Similarly, the message sent may also be a template.  If no `template`
 is specified in the channel definition, then the logline is used as
