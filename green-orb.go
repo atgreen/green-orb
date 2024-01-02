@@ -38,8 +38,9 @@ import (
 	"math"
 	"os"
 	"os/exec"
+	"os/signal"
 	"regexp"
-  "strings"
+	"strings"
 	"sync"
 	"syscall"
 	"text/template"
@@ -127,7 +128,7 @@ type TemplateData struct {
 	PID       int
 	Logline   string
 	Timestamp string
-  Env       map[string]string
+	Env       map[string]string
 }
 
 func loadYAMLConfig(filename string, config *Config) error {
@@ -145,14 +146,14 @@ func loadYAMLConfig(filename string, config *Config) error {
 }
 
 func envToMap() (map[string]string, error) {
-  envMap := make(map[string]string)
-  var err error
+	envMap := make(map[string]string)
+	var err error
 
-  for _, v := range os.Environ() {
-    split_v := strings.Split(v, "=")
-    envMap[split_v[0]] = strings.Join(split_v[1:], "=")
-  }
-  return envMap, err
+	for _, v := range os.Environ() {
+		split_v := strings.Split(v, "=")
+		envMap[split_v[0]] = strings.Join(split_v[1:], "=")
+	}
+	return envMap, err
 }
 
 func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *sync.WaitGroup) {
@@ -163,10 +164,10 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *s
 		go func(workerID int) {
 			defer wg.Done()
 			for notification := range notificationQueue {
-        env, _ := envToMap()
+				env, _ := envToMap()
 				td := TemplateData{PID: notification.PID,
 					Logline:   notification.Message,
-          Env: env,
+					Env:       env,
 					Timestamp: time.Now().Format(time.RFC3339)}
 				switch notification.Channel.Type {
 				case "notify":
@@ -194,7 +195,6 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *s
 					} else {
 						messageString = notification.Message
 					}
-
 					err = shoutrrr.Send(urlString, messageString)
 					if err != nil {
 						log.Println("org-ab warning: failed sending notification: ", err)
@@ -305,9 +305,24 @@ func main() {
 				stdout, _ := observed_cmd.StdoutPipe()
 				stderr, _ := observed_cmd.StderrPipe()
 
+				sigChan := make(chan os.Signal, 1)
+				signal.Notify(sigChan)
+
 				if err := observed_cmd.Start(); err != nil {
-					// Handle error
+					log.Fatal("green-orb error: Failed to start subprocess: ", err)
 				}
+
+				// Goroutine for passing signals
+				go func() {
+					for sig := range sigChan {
+						if sig == syscall.SIGCHLD {
+							continue
+						}
+						if err := observed_cmd.Process.Signal(sig); err != nil {
+							log.Println("green-orb error: Failed to send signal to subprocess:", err)
+						}
+					}
+				}()
 
 				pid := observed_cmd.Process.Pid
 
@@ -327,6 +342,10 @@ func main() {
 
 				// Wait for the command to finish
 				err = observed_cmd.Wait()
+
+				// After cmd.Wait(), stop listening for signals
+				signal.Stop(sigChan)
+				close(sigChan)
 			}
 
 			close(notificationQueue)
