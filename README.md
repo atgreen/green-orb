@@ -79,8 +79,9 @@ signals:
 ```
 
 `orb` does not interfere with the execution of your application.  All
-console logs still go to the console, and the exit code for your
-application is passed on through `orb`.
+console logs still go to the console, Linux and macOS signals
+are passed through to the observed process, and the exit code for your
+application is returned through `orb`.
 
 ## Channels and Signals
 
@@ -145,7 +146,7 @@ template engine includes:
 - `.Timestamp` : the RFC3339 formatted timestamp for the matching log entry
 - `.PID`: the process ID for the observed process
 - `.Logline`: the matching log line
-- `.Env`: a map to access environment variables (eg. `{{.Env.USER_PASSWORD}}`)
+- `.Env`: a map to access environment variables (e.g. `{{.Env.USER_PASSWORD}}`)
 
 Similarly, the message sent may also be a template.  If no `template`
 is specified in the channel definition, then the logline is used as
@@ -216,7 +217,7 @@ The `orb` process will exit.
 ## Contributing
 
 Green Orb is Free Software, and any and all contributions are welcome!
-Please use github's Issue tracker and Pull Request systems for
+Please use GitHub's Issue tracker and Pull Request systems for
 feedback and improvements.
 
 ## Author and License
