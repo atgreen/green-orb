@@ -232,7 +232,7 @@ func main() {
 	var numWorkers int64
 
 	cmd := &cli.Command{
-		Name:            "green-orb",
+		Name:            "orb",
 		HideHelpCommand: true,
 		Version:         version,
 		Usage:           "Your observe-and-report buddy",
