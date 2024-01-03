@@ -1,6 +1,6 @@
 // green-orb.go - an Observe and Report Buddy
 //
-// Copyright (C) 2023 Anthony Green - green@moxielogic.com
+// Copyright (C) 2023, 2024 Anthony Green - green@moxielogic.com
 //
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -315,12 +315,7 @@ func main() {
 				// Goroutine for passing signals
 				go func() {
 					for sig := range sigChan {
-						if sig == syscall.SIGCHLD {
-							continue
-						}
-						if err := observed_cmd.Process.Signal(sig); err != nil {
-							log.Println("green-orb error: Failed to send signal to subprocess:", err)
-						}
+						process_signal(observed_cmd, sig)
 					}
 				}()
 
