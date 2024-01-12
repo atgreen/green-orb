@@ -1,4 +1,4 @@
-module orb
+module github.com/atgreen/green-orb
 
 go 1.21.5
 
