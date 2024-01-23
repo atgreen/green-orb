@@ -19,7 +19,7 @@ sboms:
   - artifacts: binary
 
 builds:
-  - binary: orb
+  - binary: orb/orb
     env:
       - CGO_ENABLED=0
     ldflags:
