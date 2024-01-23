@@ -1,5 +1,7 @@
 // +build windows
 
+// SPDX-License-Identifier: MIT
+//
 // signals_windows.go - dummy placeholder
 //
 // Copyright (C) 2023, 2024 Anthony Green - green@moxielogic.com

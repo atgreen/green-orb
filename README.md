@@ -145,7 +145,8 @@ that are processed before use.  Data that you can access from the
 template engine includes:
 - `.Timestamp` : the RFC3339 formatted timestamp for the matching log entry
 - `.PID`: the process ID for the observed process
-- `.Logline`: the matching log line
+- `.Matches`: An array where the first element (`{{index .Matches 0}}`) is the entire log line matched by the regular expression, and subsequent elements (`{{index .Matches 1}}`, `{{index .Matches 2}}`, ...) contain the data captured by each of the regular expression's capturing groups.
+- `.Logline`: the matching log line. Equivalent to `{{index .Matches 0}}`.
 - `.Env`: a map to access environment variables (e.g. `{{.Env.USER_PASSWORD}}`)
 
 Similarly, the message sent may also be a template.  If no `template`

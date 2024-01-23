@@ -1,5 +1,7 @@
 // green-orb.go - an Observe and Report Buddy
 //
+// SPDX-License-Identifier: MIT
+//
 // Copyright (C) 2023, 2024 Anthony Green - green@moxielogic.com
 //
 // Permission is hereby granted, free of charge, to any person
@@ -28,6 +30,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+  "encoding/base64"
 	"fmt"
 	"github.com/containrrr/shoutrrr"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -121,12 +124,14 @@ type CompiledSignal struct {
 type Notification struct {
 	PID     int
 	Channel Channel
+	Match  []string
 	Message string
 }
 
 type TemplateData struct {
 	PID       int
 	Logline   string
+	Matches   []string
 	Timestamp string
 	Env       map[string]string
 }
@@ -168,6 +173,7 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *s
 				td := TemplateData{PID: notification.PID,
 					Logline:   notification.Message,
 					Env:       env,
+					Matches:   notification.Match,
 					Timestamp: time.Now().Format(time.RFC3339)}
 				switch notification.Channel.Type {
 				case "notify":
@@ -202,7 +208,15 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *s
 				case "exec":
 					var stdout bytes.Buffer
 					var stderr bytes.Buffer
-					cmd := exec.Command("bash", "-c", notification.Channel.Shell)
+
+					serializedMatches := "("
+					for _, m := range notification.Match[0:] {
+						encoded := base64.StdEncoding.EncodeToString([]byte(m))
+						serializedMatches += fmt.Sprintf("$(echo %s | base64 -d) ", encoded)
+					}
+					serializedMatches += ")"
+
+					cmd := exec.Command("bash", "-c", "export ORB_MATCHES=" + serializedMatches + "; " + notification.Channel.Shell)
 					cmd.Env = os.Environ()
 					cmd.Env = append(cmd.Env, fmt.Sprintf("ORB_PID=%d", notification.PID))
 					cmd.Stdout = &stdout
@@ -375,9 +389,10 @@ func monitorOutput(pid int, scanner *bufio.Scanner, compiledSignals []CompiledSi
 		line := scanner.Text()
 
 		for _, signal := range compiledSignals {
-			if signal.Regex.MatchString(line) {
+			match := signal.Regex.FindStringSubmatch(line)
+			if (match != nil) {
 				channel, _ := channelMap[signal.Channel]
-				notificationQueue <- Notification{PID: pid, Channel: channel, Message: line}
+				notificationQueue <- Notification{PID: pid, Match: match, Channel: channel, Message: line}
 			}
 		}
 

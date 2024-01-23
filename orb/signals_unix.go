@@ -1,5 +1,7 @@
 // +build linux darwin
 
+// SPDX-License-Identifier: MIT
+//
 // signals_unix.go - pass signals through to observed command
 //
 // Copyright (C) 2023, 2024 Anthony Green - green@moxielogic.com

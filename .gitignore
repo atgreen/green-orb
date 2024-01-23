@@ -21,7 +21,6 @@
 go.work
 /oarb
 config.yaml
-
+*~
 dist/
-/orb
 /secret.yaml
