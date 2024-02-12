@@ -5,7 +5,7 @@ go 1.21.5
 require (
 	github.com/containrrr/shoutrrr v0.8.0
 	github.com/twmb/franz-go v1.16.0
-	github.com/urfave/cli/v3 v3.0.0-alpha8
+	github.com/urfave/cli/v3 v3.0.0-alpha9
 	gopkg.in/yaml.v3 v3.0.1
 )
 
