@@ -179,23 +179,23 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *s
 				case "notify":
 					tmpl, err := template.New("url").Parse(notification.Channel.URL)
 					if err != nil {
-						log.Fatal("org-ab error: can't parse URL template: ", err)
+						log.Fatal("green-orb error: can't parse URL template: ", err)
 					}
 					var buffer bytes.Buffer
 					err = tmpl.Execute(&buffer, td)
 					if err != nil {
-						log.Fatal("org-ab error: can't execute URL template: ", err)
+						log.Fatal("green-orb error: can't execute URL template: ", err)
 					}
 					urlString := buffer.String()
 					if notification.Channel.Template != "" {
 						tmpl, err := template.New("msg").Parse(notification.Channel.Template)
 						if err != nil {
-							log.Fatal("org-ab error: can't parse template: ", err)
+							log.Fatal("green-orb error: can't parse template: ", err)
 						}
 						var buffer bytes.Buffer
 						err = tmpl.Execute(&buffer, td)
 						if err != nil {
-							log.Fatal("org-ab error: can't execute URL template: ", err)
+							log.Fatal("green-orb error: can't execute URL template: ", err)
 						}
 						messageString = buffer.String()
 					} else {
@@ -203,7 +203,7 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *s
 					}
 					err = shoutrrr.Send(urlString, messageString)
 					if err != nil {
-						log.Println("org-ab warning: failed sending notification: ", err)
+						log.Println("green-orb warning: failed sending notification: ", err)
 					}
 				case "exec":
 					var stdout bytes.Buffer
