@@ -104,8 +104,8 @@ channel.
 
 All channel definitions must have a `name` and a `type`.  Signals
 reference channels by `name`.  The channel's `type` must be one of
-`notify`, `kafka`, `exec`, `restart` or `kill`.  These types are
-described below.
+`notify`, `kafka`, `exec`, `suppress`, `restart` or `kill`.  These
+types are described below.
 
 ### Sending notifications to messaging platforms
 
