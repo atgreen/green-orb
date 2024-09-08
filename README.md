@@ -23,7 +23,7 @@ With Green Orb, you can:
 - **Trigger Webhooks**: Integrate with services like Ansible Automation Platform through webhooks for seamless automation.
 - **Publish to Kafka**: Send important alerts or logs directly to a Kafka topic for real-time processing.
 - **Execute Commands**: Run shell commands automatically, allowing actions like capturing thread dumps of the observed process.
-- **Manage Process**: Restart or kill the observed process to maintain desired state or recover from issues.
+- **Manage Processes**: Restart or kill the observed process to maintain desired state or recover from issues.
 
 ## Quick Start
 
