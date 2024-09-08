@@ -250,7 +250,7 @@ func main() {
 		HideHelpCommand: true,
 		Version:         version,
 		Usage:           "Your observe-and-report buddy",
-		Copyright:       "Copyright (C) 2023  Anthony Green <green@moxielogic.com>.\nDistributed under the terms of the MIT license.\nSee https://github.com/atgreen/green-orb for details.",
+		Copyright:       "Copyright (C) 2023-2024  Anthony Green <green@moxielogic.com>.\nDistributed under the terms of the MIT license.\nSee https://github.com/atgreen/green-orb for details.",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "config",
