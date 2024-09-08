@@ -30,7 +30,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-  "encoding/base64"
+	"encoding/base64"
 	"fmt"
 	"github.com/containrrr/shoutrrr"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -387,19 +387,26 @@ func main() {
 func monitorOutput(pid int, scanner *bufio.Scanner, compiledSignals []CompiledSignal, notificationQueue chan Notification, channelMap map[string]Channel, is_stderr bool) {
 	for scanner.Scan() {
 		line := scanner.Text()
+		suppress := false;
 
 		for _, signal := range compiledSignals {
 			match := signal.Regex.FindStringSubmatch(line)
 			if (match != nil) {
 				channel, _ := channelMap[signal.Channel]
-				notificationQueue <- Notification{PID: pid, Match: match, Channel: channel, Message: line}
+				if channel.Type == "suppress" {
+					suppress = true
+				} else {
+					notificationQueue <- Notification{PID: pid, Match: match, Channel: channel, Message: line}
+				}
 			}
 		}
 
-		if is_stderr {
-			fmt.Fprintln(os.Stderr, line)
-		} else {
-			fmt.Println(line)
+	  if (! suppress) {
+			if is_stderr {
+				fmt.Fprintln(os.Stderr, line)
+			} else {
+				fmt.Println(line)
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil {

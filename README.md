@@ -202,6 +202,12 @@ examination.
       aws s3 mv /tmp/${FILENAME} s3:/my-bucket/${FILENAME}
 ```
 
+### Suppressing output
+
+The channel type `suppress` is for suppressing output from your
+observed process.  Anything sent to a `suppress` channel will not flow
+through to standard output or standard error.
+
 ### Restarting your process
 
 The channel type `restart` is for restarting your observed process.
