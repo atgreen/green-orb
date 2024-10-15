@@ -4,7 +4,7 @@ go 1.21.5
 
 require (
 	github.com/containrrr/shoutrrr v0.8.0
-	github.com/twmb/franz-go v1.17.1
+	github.com/twmb/franz-go v1.18.0
 	github.com/urfave/cli/v3 v3.0.0-alpha9.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -16,7 +16,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
-	github.com/twmb/franz-go/pkg/kmsg v1.8.0 // indirect
+	github.com/twmb/franz-go/pkg/kmsg v1.9.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
