@@ -1,7 +1,7 @@
 module github.com/atgreen/green-orb/orb
 
 go 1.21.5
-toolchain go1.23.7
+toolchain go1.24.1
 
 require (
 	github.com/containrrr/shoutrrr v0.8.0
@@ -19,9 +19,9 @@ require (
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.9.0 // indirect
-	golang.org/x/crypto v0.35.0 // indirect
-	golang.org/x/net v0.36.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/crypto v0.36.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
