@@ -1,12 +1,12 @@
 module github.com/atgreen/green-orb/orb
 
 go 1.21.5
-toolchain go1.23.7
+toolchain go1.24.1
 
 require (
 	github.com/containrrr/shoutrrr v0.8.0
 	github.com/twmb/franz-go v1.18.1
-	github.com/urfave/cli/v3 v3.0.0-beta1
+	github.com/urfave/cli/v3 v3.3.2
 	gopkg.in/yaml.v3 v3.0.1
 )
 
