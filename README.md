@@ -142,8 +142,7 @@ You must specify a URL and, optionally, a message template.
 
 `orb` uses `shoutrrr` for sending notifications.  Use the following
 URL formats for these different services.  Additional details are
-available from the [`shoutrrr`
-documentation](https://containrrr.dev/shoutrrr/v0.8/services/overview/).
+available from the [`shoutrrr` fork documentation](https://github.com/nicholas-fedor/shoutrrr/tree/v0.9.1/docs).
 
 | Service     | URL Format                                                                                 |
 |-------------|-------------------------------------------------------------------------------------------- |
@@ -190,9 +189,9 @@ data with the observed PID in the email subject line:
     template: "{ \"timestamp\": \"{{.Timestamp}}\", \"message\": \"{{.Logline}}\" }"
 ```
 
-Generic webhooks and handled specially by `shoutrrr`.  Their URL
+Generic webhooks are handled specially by `shoutrrr`. Their URL
 format is described at
-[https://containrrr.dev/shoutrrr/v0.8/services/generic/](https://containrrr.dev/shoutrrr/v0.8/services/generic/).
+[https://github.com/nicholas-fedor/shoutrrr/blob/v0.9.1/docs/services/generic/index.md](https://github.com/nicholas-fedor/shoutrrr/blob/v0.9.1/docs/services/generic/index.md).
 
 ### Sending Kafka messages
 
