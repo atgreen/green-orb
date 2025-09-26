@@ -27,27 +27,29 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
-	"context"
-	"encoding/base64"
-	"fmt"
-	"github.com/containrrr/shoutrrr"
-	"github.com/twmb/franz-go/pkg/kgo"
-	"github.com/urfave/cli/v3"
-	"gopkg.in/yaml.v3"
-	"io/ioutil"
-	"log"
-	"math"
-	"os"
-	"os/exec"
-	"os/signal"
-	"regexp"
-	"strings"
-	"sync"
-	"syscall"
-	"text/template"
-	"time"
+    "bufio"
+    "bytes"
+    "context"
+    "fmt"
+    "crypto/tls"
+    "crypto/x509"
+    "github.com/containrrr/shoutrrr"
+    "github.com/twmb/franz-go/pkg/kgo"
+    "github.com/twmb/franz-go/pkg/sasl/plain"
+    "github.com/urfave/cli/v3"
+    "gopkg.in/yaml.v3"
+    "log"
+    "math"
+    "os"
+    "os/exec"
+    "os/signal"
+    "regexp"
+    "strings"
+    "sync"
+    "syscall"
+    "text/template"
+    "time"
+    "golang.org/x/time/rate"
 )
 
 var version = "dev"
@@ -55,13 +57,25 @@ var restart bool = true
 var observed_cmd *exec.Cmd
 
 type Channel struct {
-	Name     string `yaml:"name"`
-	Type     string `yaml:"type"`
-	URL      string `yaml:"url"`
-	Template string `yaml:"template"`
-	Topic    string `yaml:"topic"`
-	Broker   string `yaml:"broker"`
-	Shell    string `yaml:"shell"`
+    Name     string `yaml:"name"`
+    Type     string `yaml:"type"`
+    URL      string `yaml:"url"`
+    Template string `yaml:"template"`
+    Topic    string `yaml:"topic"`
+    Broker   string `yaml:"broker"`
+    Shell    string `yaml:"shell"`
+    // Kafka auth/TLS (optional)
+    SASLMechanism       string `yaml:"sasl_mechanism"`
+    SASLUsername        string `yaml:"sasl_username"`
+    SASLPassword        string `yaml:"sasl_password"`
+    TLSEnable           bool   `yaml:"tls"`
+    TLSInsecureSkipVerify bool `yaml:"tls_insecure_skip_verify"`
+    TLSCAFile           string `yaml:"tls_ca_file"`
+    TLSCertFile         string `yaml:"tls_cert_file"`
+    TLSKeyFile          string `yaml:"tls_key_file"`
+    // Rate limiting (optional)
+    RatePerSec          float64 `yaml:"rate_per_sec"`
+    Burst               int     `yaml:"burst"`
 }
 
 type Signal struct {
@@ -75,30 +89,71 @@ type Config struct {
 }
 
 var kafkaClients map[string]*kgo.Client = make(map[string]*kgo.Client)
+var channelLimiters map[string]*rate.Limiter = make(map[string]*rate.Limiter)
 
 func kafkaConnect(channels []Channel) (map[string]*kgo.Client, error) {
 
-	for _, channel := range channels {
-		if channel.Type == "kafka" {
-			seeds := []string{channel.Broker}
-			opts := []kgo.Opt{
-				kgo.RequiredAcks(kgo.AllISRAcks()),
-				kgo.DisableIdempotentWrite(),
-				kgo.ProducerLinger(50 * time.Millisecond),
-				kgo.RecordRetries(math.MaxInt32),
-				kgo.RecordDeliveryTimeout(5 * time.Second),
-				kgo.ProduceRequestTimeout(5 * time.Second),
-				kgo.SeedBrokers(seeds...),
-			}
+    for _, channel := range channels {
+        if channel.Type == "kafka" {
+            seeds := []string{channel.Broker}
+            opts := []kgo.Opt{
+                kgo.RequiredAcks(kgo.AllISRAcks()),
+                kgo.DisableIdempotentWrite(),
+                kgo.ProducerLinger(50 * time.Millisecond),
+                kgo.RecordRetries(math.MaxInt32),
+                kgo.RecordDeliveryTimeout(5 * time.Second),
+                kgo.ProduceRequestTimeout(5 * time.Second),
+                kgo.SeedBrokers(seeds...),
+            }
 
-			cl, err := kgo.NewClient(opts...)
-			if err != nil {
-				log.Fatal("green-orb error: failed to create kafka client connection: ", err)
-			}
-			kafkaClients[channel.Name] = cl
-		}
-	}
-	return kafkaClients, nil
+            // Optional TLS config
+            if channel.TLSEnable {
+                tlsCfg := &tls.Config{InsecureSkipVerify: channel.TLSInsecureSkipVerify} //nolint:gosec // configurable for environments with self-signed certs
+                // Load CA if provided
+                if channel.TLSCAFile != "" {
+                    caPem, err := os.ReadFile(channel.TLSCAFile)
+                    if err != nil {
+                        log.Fatal("green-orb error: failed to read TLS CA file: ", err)
+                    }
+                    pool := x509.NewCertPool()
+                    if !pool.AppendCertsFromPEM(caPem) {
+                        log.Fatal("green-orb error: failed to parse TLS CA file")
+                    }
+                    tlsCfg.RootCAs = pool
+                }
+                // Load client cert if provided
+                if channel.TLSCertFile != "" && channel.TLSKeyFile != "" {
+                    certPem, err := os.ReadFile(channel.TLSCertFile)
+                    if err != nil {
+                        log.Fatal("green-orb error: failed to read TLS cert file: ", err)
+                    }
+                    keyPem, err := os.ReadFile(channel.TLSKeyFile)
+                    if err != nil {
+                        log.Fatal("green-orb error: failed to read TLS key file: ", err)
+                    }
+                    cert, err := tls.X509KeyPair(certPem, keyPem)
+                    if err != nil {
+                        log.Fatal("green-orb error: failed to load TLS key pair: ", err)
+                    }
+                    tlsCfg.Certificates = []tls.Certificate{cert}
+                }
+                opts = append(opts, kgo.DialTLSConfig(tlsCfg))
+            }
+
+            // Optional SASL (plain)
+            if channel.SASLMechanism == "plain" || (channel.SASLMechanism == "" && channel.SASLUsername != "") {
+                mech := plain.Auth{User: channel.SASLUsername, Pass: channel.SASLPassword}.AsMechanism()
+                opts = append(opts, kgo.SASL(mech))
+            }
+
+            cl, err := kgo.NewClient(opts...)
+            if err != nil {
+                log.Fatal("green-orb error: failed to create kafka client connection: ", err)
+            }
+            kafkaClients[channel.Name] = cl
+        }
+    }
+    return kafkaClients, nil
 }
 
 func compileSignals(signals []Signal) ([]CompiledSignal, error) {
@@ -137,10 +192,10 @@ type TemplateData struct {
 }
 
 func loadYAMLConfig(filename string, config *Config) error {
-	bytes, err := ioutil.ReadFile(filename)
-	if err != nil {
-		log.Fatal("green-orb error: ", err)
-	}
+    bytes, err := os.ReadFile(filename)
+    if err != nil {
+        log.Fatal("green-orb error: ", err)
+    }
 
 	err = yaml.Unmarshal(bytes, config)
 	if err != nil {
@@ -162,7 +217,7 @@ func envToMap() (map[string]string, error) {
 }
 
 func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *sync.WaitGroup) {
-	var messageString string
+    var messageString string
 
 	for i := 0; i < int(numWorkers); i++ {
 		wg.Add(1)
@@ -175,8 +230,11 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *s
 					Env:       env,
 					Matches:   notification.Match,
 					Timestamp: time.Now().Format(time.RFC3339)}
-				switch notification.Channel.Type {
-				case "notify":
+            start := time.Now()
+            actionType := notification.Channel.Type
+            outcome := "success"
+            switch notification.Channel.Type {
+            case "notify":
 					tmpl, err := template.New("url").Parse(notification.Channel.URL)
 					if err != nil {
 						log.Fatal("green-orb error: can't parse URL template: ", err)
@@ -201,40 +259,47 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *s
 					} else {
 						messageString = notification.Message
 					}
-					err = shoutrrr.Send(urlString, messageString)
-					if err != nil {
-						log.Println("green-orb warning: failed sending notification: ", err)
-					}
-				case "exec":
-					var stdout bytes.Buffer
-					var stderr bytes.Buffer
+                err = shoutrrr.Send(urlString, messageString)
+                if err != nil {
+                    log.Println("green-orb warning: failed sending notification: ", err)
+                    outcome = "error"
+                }
+            case "exec":
+                var stdout bytes.Buffer
+                var stderr bytes.Buffer
 
-					serializedMatches := "("
-					for _, m := range notification.Match[0:] {
-						encoded := base64.StdEncoding.EncodeToString([]byte(m))
-						serializedMatches += fmt.Sprintf("$(echo %s | base64 -d) ", encoded)
-					}
-					serializedMatches += ")"
-
-					cmd := exec.Command("bash", "-c", "export ORB_MATCHES=" + serializedMatches + "; " + notification.Channel.Shell)
-					cmd.Env = os.Environ()
-					cmd.Env = append(cmd.Env, fmt.Sprintf("ORB_PID=%d", notification.PID))
-					cmd.Stdout = &stdout
-					cmd.Stderr = &stderr
-					cmd.Run()
-				case "kafka":
-					ctx := context.Background()
-					record := &kgo.Record{Topic: notification.Channel.Topic, Value: []byte(notification.Message)}
-					if err := kafkaClients[notification.Channel.Name].ProduceSync(ctx, record).FirstErr(); err != nil {
-						log.Println("green-orb warning: kafka record had a produce error:", err)
-					}
-				case "restart":
-					restart = true
-					observed_cmd.Process.Signal(syscall.SIGTERM)
-				case "kill":
-					restart = false
-					observed_cmd.Process.Signal(syscall.SIGTERM)
-				}
+                cmd := exec.Command("bash", "-c", notification.Channel.Shell)
+                cmd.Env = os.Environ()
+                cmd.Env = append(cmd.Env, fmt.Sprintf("ORB_PID=%d", notification.PID))
+                cmd.Env = append(cmd.Env, fmt.Sprintf("ORB_MATCH_COUNT=%d", len(notification.Match)))
+                for i, m := range notification.Match {
+                    // Expose each regex match as ORB_MATCH_0 .. ORB_MATCH_n
+                    cmd.Env = append(cmd.Env, fmt.Sprintf("ORB_MATCH_%d=%s", i, m))
+                }
+                cmd.Stdout = &stdout
+                cmd.Stderr = &stderr
+                if err := cmd.Run(); err != nil {
+                    log.Println("green-orb warning: exec channel failed: ", err)
+                    outcome = "error"
+                }
+            case "kafka":
+                ctx := context.Background()
+                record := &kgo.Record{Topic: notification.Channel.Topic, Value: []byte(notification.Message)}
+                if err := kafkaClients[notification.Channel.Name].ProduceSync(ctx, record).FirstErr(); err != nil {
+                    log.Println("green-orb warning: kafka record had a produce error:", err)
+                    outcome = "error"
+                }
+            case "restart":
+                restart = true
+                observed_cmd.Process.Signal(syscall.SIGTERM)
+                orbRestartsTotal.Inc()
+            case "kill":
+                restart = false
+                observed_cmd.Process.Signal(syscall.SIGTERM)
+            }
+            // Metrics for action
+            orbActionsTotal.WithLabelValues(notification.Channel.Name, actionType, outcome).Inc()
+            orbActionLatencySeconds.WithLabelValues(notification.Channel.Name, actionType).Observe(time.Since(start).Seconds())
 			}
 		}(i)
 	}
@@ -242,8 +307,10 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *s
 
 func main() {
 
-	var configFilePath string
-	var numWorkers int64
+    var configFilePath string
+    var numWorkers int64
+    var metricsEnable bool
+    var metricsAddr string
 
 	cmd := &cli.Command{
 		Name:            "orb",
@@ -251,7 +318,7 @@ func main() {
 		Version:         version,
 		Usage:           "Your observe-and-report buddy",
 		Copyright:       "Copyright (C) 2023-2024  Anthony Green <green@moxielogic.com>.\nDistributed under the terms of the MIT license.\nSee https://github.com/atgreen/green-orb for details.",
-		Flags: []cli.Flag{
+        Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "config",
 				Value:       "green-orb.yaml",
@@ -259,21 +326,33 @@ func main() {
 				Usage:       "path to the green-orb configuration file",
 				Destination: &configFilePath,
 			},
-			&cli.IntFlag{
-				Name:    "workers",
-				Value:   5,
-				Aliases: []string{"w"},
-				Usage:   "number of reporting workers",
-				Action: func(ctx context.Context, cmd *cli.Command, v int64) error {
-					if (v > 100) || (v < 1) {
-						return fmt.Errorf("Flag workers value %v out of range [1-100]", v)
-					}
-					return nil
-				},
-				Destination: &numWorkers,
-			},
-		},
-		Action: func(ctx context.Context, cmd *cli.Command) error {
+            &cli.IntFlag{
+                Name:    "workers",
+                Value:   5,
+                Aliases: []string{"w"},
+                Usage:   "number of reporting workers",
+                Action: func(ctx context.Context, cmd *cli.Command, v int64) error {
+                    if (v > 100) || (v < 1) {
+                        return fmt.Errorf("Flag workers value %v out of range [1-100]", v)
+                    }
+                    return nil
+                },
+                Destination: &numWorkers,
+            },
+            &cli.BoolFlag{
+                Name:        "metrics-enable",
+                Value:       false,
+                Usage:       "enable Prometheus metrics endpoint",
+                Destination: &metricsEnable,
+            },
+            &cli.StringFlag{
+                Name:        "metrics-addr",
+                Value:       "127.0.0.1:9090",
+                Usage:       "Prometheus metrics listen address",
+                Destination: &metricsAddr,
+            },
+        },
+        Action: func(ctx context.Context, cmd *cli.Command) error {
 
 			if cmd.NArg() == 0 {
 				// No arguments provided, show help text
@@ -287,31 +366,56 @@ func main() {
 				log.Fatal("green-orb error: Failed to load config: ", err)
 			}
 
-			kafkaConnect(config.Channel)
-			compiledSignals, _ := compileSignals(config.Signal)
+            kafkaConnect(config.Channel)
+            compiledSignals, _ := compileSignals(config.Signal)
 
-			// The remaining arguments after flags are parsed
-			subprocessArgs := cmd.Args().Slice()
+            // The remaining arguments after flags are parsed
+            subprocessArgs := cmd.Args().Slice()
 			if len(subprocessArgs) == 0 {
 				log.Fatal("green-orb error: No command provided to run")
 			}
 
-			notificationQueue := make(chan Notification, 100)
+            notificationQueue := make(chan Notification, 100)
+            // Start metrics endpoint and queue depth reporter if enabled
+            if metricsEnable {
+                StartMetricsServer(metricsAddr)
+                stopGauge := make(chan struct{})
+                go StartQueueDepthGauge(notificationQueue, stopGauge)
+                defer close(stopGauge)
+            }
 
 			// Use a WaitGroup to wait for the reading goroutines to finish
 			var wg sync.WaitGroup
 			var nwg sync.WaitGroup
 
-			startWorkers(notificationQueue, numWorkers, &nwg)
+            startWorkers(notificationQueue, numWorkers, &nwg)
 
-			channelMap := make(map[string]Channel)
-			for _, ch := range config.Channel {
-				channelMap[ch.Name] = ch
-			}
+            channelMap := make(map[string]Channel)
+            for _, ch := range config.Channel {
+                channelMap[ch.Name] = ch
+            }
 
-			for restart {
+            // Initialize channel rate limiters
+            for _, ch := range config.Channel {
+                if ch.RatePerSec > 0 {
+                    burst := ch.Burst
+                    if burst <= 0 {
+                        burst = 1
+                    }
+                    channelLimiters[ch.Name] = rate.NewLimiter(rate.Limit(ch.RatePerSec), burst)
+                }
+            }
 
-				restart = false
+            // Validate that all referenced channels exist
+            for _, cs := range compiledSignals {
+                if _, ok := channelMap[cs.Channel]; !ok {
+                    log.Fatalf("green-orb error: signal references unknown channel %q", cs.Channel)
+                }
+            }
+
+            for restart {
+
+                restart = false
 
 				// Prepare to run the subprocess
 				observed_cmd = exec.Command(subprocessArgs[0], subprocessArgs[1:]...)
@@ -322,18 +426,21 @@ func main() {
 				sigChan := make(chan os.Signal, 1)
 				signal.Notify(sigChan)
 
-				if err := observed_cmd.Start(); err != nil {
-					log.Fatal("green-orb error: Failed to start subprocess: ", err)
-				}
+                if err := observed_cmd.Start(); err != nil {
+                    log.Fatal("green-orb error: Failed to start subprocess: ", err)
+                }
 
-				// Goroutine for passing signals
-				go func() {
-					for sig := range sigChan {
-						process_signal(observed_cmd, sig)
-					}
-				}()
+                // Goroutine for passing signals
+                go func() {
+                    for sig := range sigChan {
+                        process_signal(observed_cmd, sig)
+                    }
+                }()
 
-				pid := observed_cmd.Process.Pid
+                pid := observed_cmd.Process.Pid
+                if metricsEnable {
+                    orbObservedPID.Set(float64(pid))
+                }
 
 				// Increment WaitGroup and start reading stdout
 				wg.Add(2)
@@ -346,11 +453,11 @@ func main() {
 					monitorOutput(pid, bufio.NewScanner(stderr), compiledSignals, notificationQueue, channelMap, true)
 				}()
 
-				// Wait for all reading to be complete
-				wg.Wait()
+                // Wait for all reading to be complete
+                wg.Wait()
 
-				// Wait for the command to finish
-				err = observed_cmd.Wait()
+                // Wait for the command to finish
+                err = observed_cmd.Wait()
 
 				// After cmd.Wait(), stop listening for signals
 				signal.Stop(sigChan)
@@ -359,8 +466,19 @@ func main() {
 
 			close(notificationQueue)
 
-			// Wait for all reading to be complete
-			nwg.Wait()
+            // Wait for all reading to be complete
+            nwg.Wait()
+
+            // Close Kafka clients on shutdown
+            for name, cl := range kafkaClients {
+                if cl != nil {
+                    cl.Close()
+                    _ = name // placeholder to keep variable used if needed in future
+                }
+            }
+            if metricsEnable {
+                orbObservedPID.Set(0)
+            }
 
 			// Handle exit status
 			if err != nil {
@@ -385,21 +503,43 @@ func main() {
 }
 
 func monitorOutput(pid int, scanner *bufio.Scanner, compiledSignals []CompiledSignal, notificationQueue chan Notification, channelMap map[string]Channel, is_stderr bool) {
-	for scanner.Scan() {
-		line := scanner.Text()
-		suppress := false;
+    // Increase buffer to accommodate long log lines (up to 10MB)
+    const maxLogLine = 10 * 1024 * 1024
+    scanner.Buffer(make([]byte, 0, 64*1024), maxLogLine)
+    for scanner.Scan() {
+        line := scanner.Text()
+        suppress := false;
+        // Metrics: count events per stream
+        if is_stderr {
+            orbEventsTotal.WithLabelValues("stderr").Inc()
+        } else {
+            orbEventsTotal.WithLabelValues("stdout").Inc()
+        }
 
-		for _, signal := range compiledSignals {
-			match := signal.Regex.FindStringSubmatch(line)
-			if (match != nil) {
-				channel, _ := channelMap[signal.Channel]
-				if channel.Type == "suppress" {
-					suppress = true
-				} else {
-					notificationQueue <- Notification{PID: pid, Match: match, Channel: channel, Message: line}
-				}
-			}
-		}
+        for _, signal := range compiledSignals {
+            match := signal.Regex.FindStringSubmatch(line)
+            if (match != nil) {
+                channel, _ := channelMap[signal.Channel]
+                orbSignalsMatchedTotal.WithLabelValues(signal.Regex.String(), signal.Channel).Inc()
+                if channel.Type == "suppress" {
+                    suppress = true
+                } else {
+                    // Rate limiting per channel (optional)
+                    if limiter, ok := channelLimiters[signal.Channel]; ok {
+                        if !limiter.Allow() {
+                            orbDroppedEventsTotal.WithLabelValues("rate_limited").Inc()
+                            continue
+                        }
+                    }
+                    // Non-blocking enqueue; drop if full
+                    select {
+                    case notificationQueue <- Notification{PID: pid, Match: match, Channel: channel, Message: line}:
+                    default:
+                        orbDroppedEventsTotal.WithLabelValues("queue_full").Inc()
+                    }
+                }
+            }
+        }
 
 	  if (! suppress) {
 			if is_stderr {
@@ -409,7 +549,7 @@ func monitorOutput(pid int, scanner *bufio.Scanner, compiledSignals []CompiledSi
 			}
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		log.Fatal("green-orb error: Problem reading from pipe: ", err)
-	}
+    if err := scanner.Err(); err != nil {
+        log.Fatal("green-orb error: Problem reading from pipe: ", err)
+    }
 }

@@ -1,0 +1,11 @@
+---
+channels:
+
+  - name: "test"
+    type: "exec"
+    shell: "touch SPLIT"
+
+signals:
+
+  - regex: "B.*A"
+    channel: "test"

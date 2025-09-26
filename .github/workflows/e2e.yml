@@ -1,0 +1,38 @@
+name: e2e
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      - name: Build orb
+        run: go build -o orb
+      - name: Create test config
+        run: |
+          cat > test-e2e.yaml << 'YAML'
+          channels:
+            - name: exec-test
+              type: exec
+              shell: |
+                echo "PID:$ORB_PID;COUNT:$ORB_MATCH_COUNT;M0:$ORB_MATCH_0;M1:$ORB_MATCH_1" >> "$RUNNER_TEMP/e2e.txt"
+          signals:
+            - regex: "^TRIGGER: (.*)$"
+              channel: exec-test
+          YAML
+      - name: Run orb over dummy process
+        run: |
+          set -euo pipefail
+          ./orb -c test-e2e.yaml bash -lc 'echo TRIGGER: alpha'
+      - name: Verify side effects
+        run: |
+          cat "$RUNNER_TEMP/e2e.txt"
+          grep 'M1:alpha' "$RUNNER_TEMP/e2e.txt"

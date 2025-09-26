@@ -20,7 +20,11 @@
 # Go workspace file
 go.work
 /oarb
+/# primary binary
+/orb
 config.yaml
 *~
 dist/
 /secret.yaml
+# ignore accidental variants of secret files
+/secret*.yaml

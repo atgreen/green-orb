@@ -24,6 +24,14 @@ With Green Orb, you can:
 - **Publish to Kafka**: Send important alerts or logs directly to a Kafka topic for real-time processing.
 - **Execute Commands**: Run shell commands automatically, allowing actions like capturing thread dumps of the observed process.
 - **Manage Processes**: Restart or kill the observed process to maintain desired state or recover from issues.
+- **Export Metrics**: Expose Prometheus metrics for observability and alerting.
+
+## CLI Flags
+
+- `-c, --config string` path to the configuration file (default `green-orb.yaml`).
+- `-w, --workers int` number of reporting workers (default `5`).
+- `--metrics-enable` enable Prometheus metrics endpoint (default `false`).
+- `--metrics-addr string` metrics listen address (default `127.0.0.1:9090`).
 
 ## Quick Start
 
@@ -107,6 +115,24 @@ reference channels by `name`.  The channel's `type` must be one of
 `notify`, `kafka`, `exec`, `suppress`, `restart` or `kill`.  These
 types are described below.
 
+### Channel Configuration Reference
+
+Common fields (may vary by type):
+- `name` (string): referenced by signals.
+- `type` (string): `notify`, `kafka`, `exec`, `suppress`, `restart`, `kill`.
+- `url` (string, notify): destination URL (Go text/template supported).
+- `template` (string, notify): message template (optional).
+- `broker` (string, kafka): Kafka bootstrap.
+- `topic` (string, kafka): topic name.
+- `shell` (string, exec): shell script to run.
+- `sasl_mechanism` (string, kafka): e.g. `plain` (optional).
+- `sasl_username` / `sasl_password` (string, kafka): SASL creds (optional).
+- `tls` (bool, kafka): enable TLS.
+- `tls_insecure_skip_verify` (bool, kafka): skip verification (not recommended).
+- `tls_ca_file` / `tls_cert_file` / `tls_key_file` (string, kafka): TLS files.
+- `rate_per_sec` (float): per-channel average actions per second (optional).
+- `burst` (int): tokens allowed for bursts (optional; default `1`).
+
 ### Sending notifications to messaging platforms
 
 The channel type `notify` is for sending messages to popular messaging
@@ -183,24 +209,110 @@ You must specify a broker and topic in your definition, like so:
 
 Producer timeouts are currently fixed at 5 seconds.
 
+Optional authentication and TLS:
+
+```
+  - name: "kafka-secure"
+    type: "kafka"
+    broker: "mybroker.example.com:9093"
+    topic: "orb-alerts"
+    # SASL/PLAIN example
+    sasl_mechanism: "plain"
+    sasl_username: "myuser"
+    sasl_password: "mypassword"
+    # TLS options
+    tls: true
+    tls_insecure_skip_verify: false  # not recommended in production
+    tls_ca_file: "/path/to/ca.pem"   # optional
+    tls_cert_file: "/path/to/client.crt"  # optional
+    tls_key_file: "/path/to/client.key"   # optional
+```
+
 ### Running shell scripts
 
 The channel type `exec` is for running arbitrary shell commands.
 
-The process ID of the observed process is presented to the shell code
-through the environment variable `$ORB_PID`.  In this example, the
-channel `thread-dump` invokes the `jstack` tool to dump java thread
-stacks to a file that is copied into an s3 bucket for later
-examination.
+Environment variables provided to the shell:
+- `ORB_PID`: PID of the observed process
+- `ORB_MATCH_COUNT`: number of regex matches captured
+- `ORB_MATCH_0 .. ORB_MATCH_n`: match values; index 0 is the full line, 1..n are capture groups
+
+In this example, the channel `thread-dump` invokes the `jstack` tool to
+dump java thread stacks to a file that is copied into an s3 bucket for
+later examination.
 
 ```
   - name: "thread-dump"
     type: "exec"
     shell: |
       FILENAME=thread-dump-$(date).txt
-      jstack $ORB_PID > /tmp/${FILENAME}
+      jstack "$ORB_PID" > /tmp/${FILENAME}
       aws s3 mv /tmp/${FILENAME} s3:/my-bucket/${FILENAME}
+
+You can also reference capture groups from your regex using `ORB_MATCH_1`,
+`ORB_MATCH_2`, etc. For example, to echo the first capture group:
+
 ```
+  - name: "dump-first-match"
+    type: "exec"
+    shell: |
+      echo "First match: $ORB_MATCH_1" >> /tmp/matches.txt
+```
+
+Compatibility note: older examples used a bash array-like variable to expose
+regex matches. This has been replaced by explicit `ORB_MATCH_n` environment
+variables for portability and correctness.
+
+## Metrics
+
+Green Orb can expose Prometheus metrics for monitoring throughput and behavior.
+
+- Enable via `--metrics-enable` and set the listen address with `--metrics-addr` (defaults to `127.0.0.1:9090`).
+- Exposes `/metrics` with counters, histograms and gauges, including:
+  - `orb_events_total{stream}`: lines processed per stream (`stdout|stderr`).
+  - `orb_signals_matched_total{signal,channel}`: regex matches.
+  - `orb_actions_total{channel,type,outcome}`: actions executed and result.
+  - `orb_action_latency_seconds{channel,type}`: action latency.
+  - `orb_dropped_events_total{reason}`: dropped events (`queue_full|rate_limited`).
+  - `orb_queue_depth`: current queue size.
+  - `orb_observed_pid`: PID of the observed process.
+
+Example:
+
+```
+orb --metrics-enable --metrics-addr 127.0.0.1:9090 myapp ...
+```
+
+Prometheus scrape example:
+
+```
+scrape_configs:
+  - job_name: 'green-orb'
+    static_configs:
+      - targets: ['127.0.0.1:9090']
+```
+
+## Rate Limiting and Non-Blocking Queue
+
+To prevent backpressure and notification storms, Green Orb uses a non-blocking queue and supports per-channel rate limiting.
+
+- Non-blocking enqueue drops when the queue is full and counts drops in `orb_dropped_events_total{reason="queue_full"}`.
+- Configure per-channel token-bucket rate limits with optional `rate_per_sec` and `burst` fields:
+
+```
+channels:
+  - name: "slack-alerts"
+    type: "notify"
+    url:  "slack://..."
+    rate_per_sec: 2.0   # average 2 actions per second
+    burst: 5            # allow short bursts
+```
+
+Events that exceed rate limits are dropped and counted in `orb_dropped_events_total{reason="rate_limited"}`.
+
+Operational tips:
+- If you see `queue_full` drops, increase `--workers`, add per-channel `rate_per_sec`, or reduce event volume.
+- Keep `/metrics` bound to localhost or protect it behind auth when needed.
 
 ### Suppressing output
 
