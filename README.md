@@ -249,6 +249,8 @@ later examination.
       jstack "$ORB_PID" > /tmp/${FILENAME}
       aws s3 mv /tmp/${FILENAME} s3:/my-bucket/${FILENAME}
 
+```
+
 You can also reference capture groups from your regex using `ORB_MATCH_1`,
 `ORB_MATCH_2`, etc. For example, to echo the first capture group:
 
