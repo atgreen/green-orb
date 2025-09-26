@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Green Orb — Observe and Report Buddy</title>
+    <meta name="description" content="Green Orb is a lightweight 'Observe and Report Buddy' that watches your app logs and triggers actions: notify, webhooks, Kafka, exec, restart/kill, and metrics." />
+    <meta property="og:title" content="Green Orb" />
+    <meta property="og:description" content="A lightweight monitoring sidecar that watches logs and triggers actions (notify, webhooks, Kafka, exec) with Prometheus metrics and checks." />
+    <meta property="og:image" content="https://raw.githubusercontent.com/atgreen/green-orb/main/images/green-orb.png" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="https://raw.githubusercontent.com/atgreen/green-orb/main/images/green-orb.png" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="bg-orbs" aria-hidden="true">
+      <span class="orb" style="--size: 480px; --x: 10%; --y: 25%; --delay: -6s;  --duration: 50s"></span>
+      <span class="orb" style="--size: 360px; --x: 82%; --y: 18%; --delay: -14s; --duration: 58s"></span>
+      <span class="orb" style="--size: 280px; --x: 68%; --y: 70%; --delay: -10s; --duration: 46s"></span>
+      <span class="orb" style="--size: 220px; --x: 22%; --y: 70%; --delay: -20s; --duration: 54s"></span>
+      <span class="orb" style="--size: 180px; --x: 42%; --y: 38%; --delay: -8s;  --duration: 40s"></span>
+      <span class="orb" style="--size: 140px; --x: 55%; --y: 15%; --delay: -4s;  --duration: 36s"></span>
+      <span class="orb" style="--size: 110px; --x: 30%; --y: 40%; --delay: -18s; --duration: 44s"></span>
+      <span class="orb" style="--size:  90px; --x: 90%; --y: 82%; --delay: -26s; --duration: 62s"></span>
+      <span class="orb" style="--size:  70px; --x: 12%; --y: 88%; --delay: -12s; --duration: 34s"></span>
+      <span class="orb" style="--size:  60px; --x: 76%; --y: 44%; --delay: -22s; --duration: 38s"></span>
+    </div>
+    <header class="hero">
+      <img class="logo" src="https://raw.githubusercontent.com/atgreen/green-orb/main/images/green-orb.png" alt="Green Orb logo" />
+      <h1>Green Orb</h1>
+      <p class="tagline">An Observe and Report Buddy for your SRE toolbox</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/atgreen/green-orb#readme">Get Started</a>
+        <a class="btn" href="https://github.com/atgreen/green-orb/releases">Download</a>
+        <a class="btn" href="https://github.com/atgreen/green-orb">GitHub</a>
+      </div>
+      <p class="synopsis">Wrap your app, watch logs, act fast. Green Orb turns patterns into actions—notify, webhooks, Kafka, or scripts—without code changes. Ideal for containers, on‑call speed, and pragmatic SRE automation.</p>
+    </header>
+
+    <main class="container">
+      <section class="features">
+        <h2>Why Green Orb?</h2>
+        <p class="why-copy">Green Orb tails your app’s stdout/stderr and turns regex matches into actions—send notifications (Email, Slack, Discord, Teams, Telegram, Matrix, Pushover, Pushbullet, Gotify, Google Chat, Mattermost, Opsgenie, ntfy, Zulip, Bark, Join), fire webhooks, publish to Kafka, run scripts (e.g., thread dumps), or restart/kill—no code changes, just a tiny sidecar process.</p>
+        <div class="grid">
+          <div class="card">
+            <h3>Smart Notifications</h3>
+            <p>Send alerts to Slack, Email, Discord, Teams, and more.</p>
+          </div>
+          <div class="card">
+            <h3>Webhooks & Kafka</h3>
+            <p>Call HTTP endpoints or publish to Kafka topics.</p>
+          </div>
+          <div class="card">
+            <h3>Automated Actions</h3>
+            <p>Run shell scripts on matches; use capture groups.</p>
+          </div>
+          <div class="card">
+            <h3>Process Control</h3>
+            <p>Restart or kill the observed process via signals.</p>
+          </div>
+          <div class="card">
+            <h3>Built-in Metrics</h3>
+            <p>Prometheus counters, histograms, and gauges.</p>
+          </div>
+          <div class="card">
+            <h3>Periodic Checks</h3>
+            <p>HTTP/TCP checks + flapping detection.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="quickstart">
+        <h2>Quick Start</h2>
+        <ol>
+          <li>Download the <code>orb</code> binary from <a href="https://github.com/atgreen/green-orb/releases">Releases</a>.</li>
+          <li>Create a config file named <code>green-orb.yaml</code> in your working directory.</li>
+          <li>Run your app through <code>orb</code>:</li>
+        </ol>
+<pre><code>$ orb &lt;your command&gt;
+# Example
+$ orb java -jar mywebapp.jar</code></pre>
+        <p>Using Docker? Set your <code>ENTRYPOINT</code> to run via <code>orb</code>:</p>
+<pre><code>ENTRYPOINT ["orb", "java", "-jar", "app.jar"]</code></pre>
+      </section>
+
+      <section class="example">
+        <h2>Minimal Example</h2>
+<pre><code>channels:
+  - name: "startup-email"
+    type: "notify"
+    url:  "smtp://USER:PASS@smtp.gmail.com:587/?from=USER@gmail.com&amp;to=USER@gmail.com&amp;subject=App%20Starting!"
+
+signals:
+  - regex: "Starting Application"
+    channel: "startup-email"</code></pre>
+        <p>Reference regex capture groups via environment variables <code>ORB_MATCH_1</code>, <code>ORB_MATCH_2</code>, … in <code>exec</code> channels.</p>
+      </section>
+
+      <section class="links">
+        <h2>Learn More</h2>
+        <ul>
+          <li><a href="https://github.com/atgreen/green-orb#readme">README</a></li>
+          <li><a href="https://github.com/atgreen/green-orb/blob/main/green-orb.yaml">Sample config</a></li>
+          <li><a href="https://github.com/atgreen/green-orb/blob/main/secret.example.yaml">Secret config example</a></li>
+          <li><a href="https://github.com/atgreen/green-orb#sending-notifications-to-messaging-platforms">Notification service docs</a></li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>© 2023–2025 Anthony Green. MIT License.</p>
+    </footer>
+  </body>
+  </html>
