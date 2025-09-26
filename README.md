@@ -45,7 +45,7 @@ $ java -jar mywebapp.jar
 ```
 ...use...
 ```
-$ orb java -jar mywebapp.jar
+$ orb -- java -jar mywebapp.jar
 ```
 
 Or, if you are using containers, change...
@@ -54,11 +54,12 @@ ENTRYPOINT [ "java", "-jar", "jar-file-name.jar" ]
 ```
 ...in your Dockerfile, to...
 ```
-ENTRYPOINT [ "orb", "java", "-jar", "jar-file-name.jar" ]
+ENTRYPOINT [ "orb", "--", "java", "-jar", "jar-file-name.jar" ]
 ```
 
-This assumes `green-orb.yaml` is in the current directory.  Use the
-`-c` flag to point it elsewhere.
+This assumes `green-orb.yaml` is in the current directory. Use the
+`-c` flag to point it elsewhere. If your command uses flags, separate
+orb’s flags from your command with `--` as shown above.
 
 The config file tells `orb` what to watch for, and what to do.  For
 instance, if it contains the following, you'll get an email every time
