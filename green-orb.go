@@ -33,7 +33,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-    "github.com/nicholas-fedor/shoutrrr"
+	"github.com/nicholas-fedor/shoutrrr"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/plain"
 	"github.com/urfave/cli/v3"
@@ -382,162 +382,168 @@ func main() {
 			},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-
 			if cmd.NArg() == 0 {
 				// No arguments provided, show help text
 				cli.ShowAppHelp(cmd)
 				return nil
 			}
-
-			config := Config{}
-			err := loadYAMLConfig(configFilePath, &config)
-			if err != nil {
-				log.Fatal("green-orb error: Failed to load config: ", err)
-			}
-
-			kafkaConnect(config.Channel)
-			compiledSignals, _ := compileSignals(config.Signal)
-
-			// The remaining arguments after flags are parsed
-			subprocessArgs := cmd.Args().Slice()
-			if len(subprocessArgs) == 0 {
-				log.Fatal("green-orb error: No command provided to run")
-			}
-
-			notificationQueue := make(chan Notification, 100)
-			// Start metrics endpoint and queue depth reporter if enabled
-			if metricsEnable {
-				StartMetricsServer(metricsAddr)
-				stopGauge := make(chan struct{})
-				go StartQueueDepthGauge(notificationQueue, stopGauge)
-				defer close(stopGauge)
-			}
-
-			// Use a WaitGroup to wait for the reading goroutines to finish
-			var wg sync.WaitGroup
-			var nwg sync.WaitGroup
-
-			startWorkers(notificationQueue, numWorkers, &nwg)
-
-			channelMap := make(map[string]Channel)
-			for _, ch := range config.Channel {
-				channelMap[ch.Name] = ch
-			}
-
-			// Initialize channel rate limiters
-			for _, ch := range config.Channel {
-				if ch.RatePerSec > 0 {
-					burst := ch.Burst
-					if burst <= 0 {
-						burst = 1
+			return runObserved(ctx, configFilePath, numWorkers, metricsEnable, metricsAddr, cmd.Args().Slice())
+		},
+		Commands: []*cli.Command{
+			{
+				Name:            "run",
+				Usage:           "Run an observed command; stops flag parsing at the first non-flag",
+				SkipFlagParsing: true,
+				Action: func(ctx context.Context, c *cli.Command) error {
+					if c.NArg() == 0 {
+						cli.ShowCommandHelp(c, "run")
+						return nil
 					}
-					channelLimiters[ch.Name] = rate.NewLimiter(rate.Limit(ch.RatePerSec), burst)
-				}
-			}
-
-			// Start checks scheduler if any checks are defined
-			stopChecks := startChecksScheduler(config.Check, func() int {
-				if observed_cmd != nil && observed_cmd.Process != nil {
-					return observed_cmd.Process.Pid
-				}
-				return 0
-			}, channelMap, notificationQueue)
-			defer stopChecks()
-
-			// Validate that all referenced channels exist
-			for _, cs := range compiledSignals {
-				if _, ok := channelMap[cs.Channel]; !ok {
-					log.Fatalf("green-orb error: signal references unknown channel %q", cs.Channel)
-				}
-			}
-
-			for restart {
-
-				restart = false
-
-				// Prepare to run the subprocess
-				observed_cmd = exec.Command(subprocessArgs[0], subprocessArgs[1:]...)
-				// Rest of your code to handle the subprocess...
-				stdout, _ := observed_cmd.StdoutPipe()
-				stderr, _ := observed_cmd.StderrPipe()
-
-				sigChan := make(chan os.Signal, 1)
-				signal.Notify(sigChan)
-
-				if err := observed_cmd.Start(); err != nil {
-					log.Fatal("green-orb error: Failed to start subprocess: ", err)
-				}
-
-				// Goroutine for passing signals
-				go func() {
-					for sig := range sigChan {
-						process_signal(observed_cmd, sig)
-					}
-				}()
-
-				pid := observed_cmd.Process.Pid
-				if metricsEnable {
-					orbObservedPID.Set(float64(pid))
-				}
-
-				// Increment WaitGroup and start reading stdout
-				wg.Add(2)
-				go func() {
-					defer wg.Done()
-					monitorOutput(pid, bufio.NewScanner(stdout), compiledSignals, notificationQueue, channelMap, false)
-				}()
-				go func() {
-					defer wg.Done()
-					monitorOutput(pid, bufio.NewScanner(stderr), compiledSignals, notificationQueue, channelMap, true)
-				}()
-
-				// Wait for all reading to be complete
-				wg.Wait()
-
-				// Wait for the command to finish
-				err = observed_cmd.Wait()
-
-				// After cmd.Wait(), stop listening for signals
-				signal.Stop(sigChan)
-				close(sigChan)
-			}
-
-			close(notificationQueue)
-
-			// Wait for all reading to be complete
-			nwg.Wait()
-
-			// Close Kafka clients on shutdown
-			for name, cl := range kafkaClients {
-				if cl != nil {
-					cl.Close()
-					_ = name // placeholder to keep variable used if needed in future
-				}
-			}
-			if metricsEnable {
-				orbObservedPID.Set(0)
-			}
-
-			// Handle exit status
-			if err != nil {
-				// observed_cmd.Wait() returns an error if the command exits non-zero
-				if exitError, ok := err.(*exec.ExitError); ok {
-					// Get the command's exit code
-					os.Exit(exitError.ExitCode())
-				} else {
-					// Other error types (not non-zero exit)
-					log.Fatal("green-orb error: Error waiting for Command:", err)
-				}
-			} else {
-				// Success (exit code 0)
-				os.Exit(0)
-			}
-			return nil
+					return runObserved(ctx, configFilePath, numWorkers, metricsEnable, metricsAddr, c.Args().Slice())
+				},
+			},
 		},
 	}
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// runObserved contains the core execution logic for running and observing a subprocess.
+func runObserved(ctx context.Context, configFilePath string, numWorkers int64, metricsEnable bool, metricsAddr string, subprocessArgs []string) error {
+	config := Config{}
+	if err := loadYAMLConfig(configFilePath, &config); err != nil {
+		log.Fatal("green-orb error: Failed to load config: ", err)
+	}
+
+	kafkaConnect(config.Channel)
+	compiledSignals, _ := compileSignals(config.Signal)
+
+	if len(subprocessArgs) == 0 {
+		log.Fatal("green-orb error: No command provided to run")
+	}
+
+	notificationQueue := make(chan Notification, 100)
+	// Start metrics endpoint and queue depth reporter if enabled
+	if metricsEnable {
+		StartMetricsServer(metricsAddr)
+		stopGauge := make(chan struct{})
+		go StartQueueDepthGauge(notificationQueue, stopGauge)
+		defer close(stopGauge)
+	}
+
+	// Use a WaitGroup to wait for the reading goroutines to finish
+	var wg sync.WaitGroup
+	var nwg sync.WaitGroup
+
+	startWorkers(notificationQueue, numWorkers, &nwg)
+
+	channelMap := make(map[string]Channel)
+	for _, ch := range config.Channel {
+		channelMap[ch.Name] = ch
+	}
+
+	// Initialize channel rate limiters
+	for _, ch := range config.Channel {
+		if ch.RatePerSec > 0 {
+			burst := ch.Burst
+			if burst <= 0 {
+				burst = 1
+			}
+			channelLimiters[ch.Name] = rate.NewLimiter(rate.Limit(ch.RatePerSec), burst)
+		}
+	}
+
+	// Start checks scheduler if any checks are defined
+	stopChecks := startChecksScheduler(config.Check, func() int {
+		if observed_cmd != nil && observed_cmd.Process != nil {
+			return observed_cmd.Process.Pid
+		}
+		return 0
+	}, channelMap, notificationQueue)
+	defer stopChecks()
+
+	// Validate that all referenced channels exist
+	for _, cs := range compiledSignals {
+		if _, ok := channelMap[cs.Channel]; !ok {
+			log.Fatalf("green-orb error: signal references unknown channel %q", cs.Channel)
+		}
+	}
+
+	var err error
+	for restart {
+		restart = false
+
+		// Prepare to run the subprocess
+		observed_cmd = exec.Command(subprocessArgs[0], subprocessArgs[1:]...)
+		stdout, _ := observed_cmd.StdoutPipe()
+		stderr, _ := observed_cmd.StderrPipe()
+
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan)
+
+		if err := observed_cmd.Start(); err != nil {
+			log.Fatal("green-orb error: Failed to start subprocess: ", err)
+		}
+
+		// Goroutine for passing signals
+		go func() {
+			for sig := range sigChan {
+				process_signal(observed_cmd, sig)
+			}
+		}()
+
+		pid := observed_cmd.Process.Pid
+		if metricsEnable {
+			orbObservedPID.Set(float64(pid))
+		}
+
+		// Increment WaitGroup and start reading stdout/stderr
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			monitorOutput(pid, bufio.NewScanner(stdout), compiledSignals, notificationQueue, channelMap, false)
+		}()
+		go func() {
+			defer wg.Done()
+			monitorOutput(pid, bufio.NewScanner(stderr), compiledSignals, notificationQueue, channelMap, true)
+		}()
+
+		// Wait for all reading to be complete
+		wg.Wait()
+
+		// Wait for the command to finish
+		err = observed_cmd.Wait()
+
+		// After cmd.Wait(), stop listening for signals
+		signal.Stop(sigChan)
+		close(sigChan)
+	}
+
+	close(notificationQueue)
+	nwg.Wait()
+
+	// Close Kafka clients on shutdown
+	for name, cl := range kafkaClients {
+		if cl != nil {
+			cl.Close()
+			_ = name
+		}
+	}
+	if metricsEnable {
+		orbObservedPID.Set(0)
+	}
+
+	// Handle exit status
+	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			os.Exit(exitError.ExitCode())
+		}
+		log.Fatal("green-orb error: Error waiting for Command:", err)
+	} else {
+		os.Exit(0)
+	}
+	return nil
 }
 
 func monitorOutput(pid int, scanner *bufio.Scanner, compiledSignals []CompiledSignal, notificationQueue chan Notification, channelMap map[string]Channel, is_stderr bool) {
