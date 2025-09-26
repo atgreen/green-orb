@@ -33,7 +33,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/containrrr/shoutrrr"
+    "github.com/nicholas-fedor/shoutrrr"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/plain"
 	"github.com/urfave/cli/v3"
