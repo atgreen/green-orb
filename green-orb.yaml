@@ -13,6 +13,8 @@ channels:
     type: "notify"
     url:  "smtp://{{.Env.SENDER_EMAIL}:{{.Env.SENDER_PASSWORD}}@smtp.gmail.com:587/?from={{.Env.SENDER_EMAIL}}&to={{.Env.RECIPIENT_EMAIL}}&subject=Go%20Alert!"
     template: "Just started process {{.PID}} on {{.Env.HOSTNAME}}"
+    rate_per_sec: 2.0
+    burst: 5
 
 # Produce a kafka message.
 
