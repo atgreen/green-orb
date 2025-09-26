@@ -33,6 +33,9 @@ import (
     "fmt"
     "crypto/tls"
     "crypto/x509"
+    "io"
+    "net"
+    "net/http"
     "github.com/containrrr/shoutrrr"
     "github.com/twmb/franz-go/pkg/kgo"
     "github.com/twmb/franz-go/pkg/sasl/plain"
@@ -86,10 +89,13 @@ type Signal struct {
 type Config struct {
 	Channel []Channel `yaml:"channels"`
 	Signal  []Signal  `yaml:"signals"`
+    Check   []Check   `yaml:"checks"`
 }
 
 var kafkaClients map[string]*kgo.Client = make(map[string]*kgo.Client)
 var channelLimiters map[string]*rate.Limiter = make(map[string]*rate.Limiter)
+var restartTimesMu sync.Mutex
+var restartTimes []time.Time
 
 func kafkaConnect(channels []Channel) (map[string]*kgo.Client, error) {
 
@@ -184,11 +190,30 @@ type Notification struct {
 }
 
 type TemplateData struct {
-	PID       int
-	Logline   string
-	Matches   []string
-	Timestamp string
-	Env       map[string]string
+    PID       int
+    Logline   string
+    Matches   []string
+    Timestamp string
+    Env       map[string]string
+}
+
+// Check configuration for periodic health checks
+type Check struct {
+    Name            string `yaml:"name"`
+    Type            string `yaml:"type"` // http, tcp, flapping
+    Channel         string `yaml:"channel"`
+    Interval        string `yaml:"interval"`
+    Timeout         string `yaml:"timeout"`
+    // HTTP-specific
+    URL             string `yaml:"url"`
+    ExpectStatus    int    `yaml:"expect_status"`
+    BodyRegex       string `yaml:"body_regex"`
+    // TCP-specific
+    Host            string `yaml:"host"`
+    Port            int    `yaml:"port"`
+    // Flapping-specific
+    RestartThreshold int    `yaml:"restart_threshold"`
+    Window           string `yaml:"window"`
 }
 
 func loadYAMLConfig(filename string, config *Config) error {
@@ -293,6 +318,9 @@ func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *s
                 restart = true
                 observed_cmd.Process.Signal(syscall.SIGTERM)
                 orbRestartsTotal.Inc()
+                restartTimesMu.Lock()
+                restartTimes = append(restartTimes, time.Now())
+                restartTimesMu.Unlock()
             case "kill":
                 restart = false
                 observed_cmd.Process.Signal(syscall.SIGTERM)
@@ -405,6 +433,15 @@ func main() {
                     channelLimiters[ch.Name] = rate.NewLimiter(rate.Limit(ch.RatePerSec), burst)
                 }
             }
+
+            // Start checks scheduler if any checks are defined
+            stopChecks := startChecksScheduler(config.Check, func() int {
+                if observed_cmd != nil && observed_cmd.Process != nil {
+                    return observed_cmd.Process.Pid
+                }
+                return 0
+            }, channelMap, notificationQueue)
+            defer stopChecks()
 
             // Validate that all referenced channels exist
             for _, cs := range compiledSignals {
@@ -551,5 +588,181 @@ func monitorOutput(pid int, scanner *bufio.Scanner, compiledSignals []CompiledSi
 	}
     if err := scanner.Err(); err != nil {
         log.Fatal("green-orb error: Problem reading from pipe: ", err)
+    }
+}
+
+// startChecksScheduler launches periodic checks and returns a stop function.
+func startChecksScheduler(checks []Check, currentPID func() int, channelMap map[string]Channel, q chan Notification) func() {
+    if len(checks) == 0 {
+        return func() {}
+    }
+    stop := make(chan struct{})
+
+    for _, c := range checks {
+        // Resolve channel exists early
+        if _, ok := channelMap[c.Channel]; !ok {
+            log.Printf("green-orb warning: check %q references unknown channel %q; skipping", c.Name, c.Channel)
+            continue
+        }
+        // Parse intervals/timeouts
+        interval := 15 * time.Second
+        if c.Interval != "" {
+            if d, err := time.ParseDuration(c.Interval); err == nil {
+                interval = d
+            } else {
+                log.Printf("green-orb warning: invalid interval for check %q: %v; using 15s", c.Name, err)
+            }
+        }
+        timeout := 5 * time.Second
+        if c.Timeout != "" {
+            if d, err := time.ParseDuration(c.Timeout); err == nil {
+                timeout = d
+            } else {
+                log.Printf("green-orb warning: invalid timeout for check %q: %v; using 5s", c.Name, err)
+            }
+        }
+
+        switch strings.ToLower(c.Type) {
+        case "http":
+            var bodyRE *regexp.Regexp
+            if c.BodyRegex != "" {
+                re, err := regexp.Compile(c.BodyRegex)
+                if err != nil {
+                    log.Printf("green-orb warning: invalid body_regex for check %q: %v; skipping", c.Name, err)
+                    continue
+                }
+                bodyRE = re
+            }
+            client := &http.Client{Timeout: timeout}
+            go func(ch Check) {
+                ticker := time.NewTicker(interval)
+                defer ticker.Stop()
+                for {
+                    select {
+                    case <-stop:
+                        return
+                    case <-ticker.C:
+                        outcome := "success"
+                        reqStart := time.Now()
+                        resp, err := client.Get(ch.URL)
+                        if err != nil {
+                            outcome = "error"
+                            enqueueNotification(currentPID(), ch.Channel, fmt.Sprintf("check[%s:http] error: %v", ch.Name, err), channelMap, q)
+                            orbChecksTotal.WithLabelValues("http", outcome).Inc()
+                            continue
+                        }
+                        func() {
+                            defer resp.Body.Close()
+                            if ch.ExpectStatus != 0 && resp.StatusCode != ch.ExpectStatus {
+                                outcome = "error"
+                                enqueueNotification(currentPID(), ch.Channel, fmt.Sprintf("check[%s:http] unexpected status: got %d want %d", ch.Name, resp.StatusCode, ch.ExpectStatus), channelMap, q)
+                                return
+                            }
+                            if bodyRE != nil {
+                                // Limit body read to 1MB
+                                body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+                                if !bodyRE.Match(body) {
+                                    outcome = "error"
+                                    enqueueNotification(currentPID(), ch.Channel, fmt.Sprintf("check[%s:http] body does not match regex", ch.Name), channelMap, q)
+                                    return
+                                }
+                            }
+                        }()
+                        _ = reqStart
+                        orbChecksTotal.WithLabelValues("http", outcome).Inc()
+                    }
+                }
+            }(c)
+        case "tcp":
+            address := fmt.Sprintf("%s:%d", c.Host, c.Port)
+            go func(ch Check) {
+                ticker := time.NewTicker(interval)
+                defer ticker.Stop()
+                for {
+                    select {
+                    case <-stop:
+                        return
+                    case <-ticker.C:
+                        outcome := "success"
+                        conn, err := net.DialTimeout("tcp", address, timeout)
+                        if err != nil {
+                            outcome = "error"
+                            enqueueNotification(currentPID(), ch.Channel, fmt.Sprintf("check[%s:tcp] connect error: %v", ch.Name, err), channelMap, q)
+                        } else {
+                            conn.Close()
+                        }
+                        orbChecksTotal.WithLabelValues("tcp", outcome).Inc()
+                    }
+                }
+            }(c)
+        case "flapping":
+            // Alert when restarts in Window >= RestartThreshold
+            win := 5 * time.Minute
+            if c.Window != "" {
+                if d, err := time.ParseDuration(c.Window); err == nil {
+                    win = d
+                } else {
+                    log.Printf("green-orb warning: invalid window for check %q: %v; using 5m", c.Name, err)
+                }
+            }
+            threshold := c.RestartThreshold
+            if threshold <= 0 {
+                threshold = 3
+            }
+            var lastAlert time.Time
+            go func(ch Check) {
+                ticker := time.NewTicker(interval)
+                defer ticker.Stop()
+                for {
+                    select {
+                    case <-stop:
+                        return
+                    case <-ticker.C:
+                        cutoff := time.Now().Add(-win)
+                        restartTimesMu.Lock()
+                        count := 0
+                        for _, t := range restartTimes {
+                            if t.After(cutoff) {
+                                count++
+                            }
+                        }
+                        restartTimesMu.Unlock()
+                        outcome := "success"
+                        if count >= threshold {
+                            // avoid spamming: only alert once per window
+                            if time.Since(lastAlert) > win/2 {
+                                enqueueNotification(currentPID(), ch.Channel, fmt.Sprintf("check[%s:flapping] %d restarts within %s", ch.Name, count, win), channelMap, q)
+                                lastAlert = time.Now()
+                            }
+                            outcome = "error"
+                        }
+                        orbChecksTotal.WithLabelValues("flapping", outcome).Inc()
+                    }
+                }
+            }(c)
+        default:
+            log.Printf("green-orb warning: unknown check type %q for check %q; skipping", c.Type, c.Name)
+        }
+    }
+
+    return func() { close(stop) }
+}
+
+// enqueueNotification sends a Notification using existing rate limiting and drop accounting.
+func enqueueNotification(pid int, channelName, message string, channelMap map[string]Channel, q chan Notification) {
+    ch, ok := channelMap[channelName]
+    if !ok {
+        return
+    }
+    if limiter, ok := channelLimiters[channelName]; ok {
+        if !limiter.Allow() {
+            orbDroppedEventsTotal.WithLabelValues("rate_limited").Inc()
+            return
+        }
+    }
+    select {
+    case q <- Notification{PID: pid, Match: nil, Channel: ch, Message: message}:
+    default:
+        orbDroppedEventsTotal.WithLabelValues("queue_full").Inc()
     }
 }

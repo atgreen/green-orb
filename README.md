@@ -314,6 +314,44 @@ Operational tips:
 - If you see `queue_full` drops, increase `--workers`, add per-channel `rate_per_sec`, or reduce event volume.
 - Keep `/metrics` bound to localhost or protect it behind auth when needed.
 
+## Checks (HTTP/TCP/Flapping)
+
+In addition to log-driven signals, Green Orb can run periodic checks and trigger channels when conditions fail.
+
+- Define checks in `checks:`; each check sends a message to a `channel` when it fails.
+- Supported types: `http`, `tcp`, `flapping` (restart burst detection).
+
+Examples:
+
+```
+checks:
+  - name: web-status
+    type: http
+    url: https://example.com/health
+    expect_status: 200
+    body_regex: "OK"           # optional
+    interval: 30s
+    timeout: 5s
+    channel: email_alerts
+
+  - name: db-port
+    type: tcp
+    host: db.internal
+    port: 5432
+    interval: 15s
+    timeout: 3s
+    channel: email_alerts
+
+  - name: service-flapping
+    type: flapping
+    restart_threshold: 3        # restarts
+    window: 5m                  # within this window
+    interval: 30s
+    channel: email_alerts
+```
+
+Metrics: `orb_checks_total{type,outcome}` increments on each run with `outcome`=`success|error`.
+
 ### Suppressing output
 
 The channel type `suppress` is for suppressing output from your

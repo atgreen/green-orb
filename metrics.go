@@ -74,6 +74,14 @@ var (
             Help: "PID of the observed process (0 when none)",
         },
     )
+
+    orbChecksTotal = promauto.NewCounterVec(
+        prometheus.CounterOpts{
+            Name: "orb_checks_total",
+            Help: "Total checks executed by type and outcome",
+        },
+        []string{"type", "outcome"},
+    )
 )
 
 func StartMetricsServer(addr string) {
@@ -105,4 +113,3 @@ func StartQueueDepthGauge(ch chan Notification, stop <-chan struct{}) {
         }
     }
 }
-
