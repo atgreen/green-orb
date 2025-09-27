@@ -203,9 +203,9 @@ GLOBAL OPTIONS:
 EXAMPLES:
    orb echo "Hello World"                     # Observe echo command (loads .env if present)
    orb -c myconfig.yaml ls -la                # Use custom config with ls -la
-   orb --metrics-enable java -jar app.jar    # Enable metrics while observing Java app
+   orb --metrics-enable java -jar app.jar     # Enable metrics while observing Java app
    orb --skip-dotenv npm start                # Skip loading .env file
-   orb --env production.env node app.js      # Load custom env file (plus .env unless --skip-dotenv)
+   orb --env production.env node app.js       # Load custom env file (plus .env unless --skip-dotenv)
 
 COPYRIGHT:
    Copyright (C) 2023-2025  Anthony Green <green@moxielogic.com>.
