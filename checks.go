@@ -120,11 +120,13 @@ func (cs *CheckScheduler) executeHTTPCheck(check Check) error {
 	}
 
 	// Make request
-	resp, err := client.Get(check.URL)
-	if err != nil {
-		return fmt.Errorf("HTTP request failed: %w", err)
-	}
-	defer resp.Body.Close()
+    resp, err := client.Get(check.URL)
+    if err != nil {
+        return fmt.Errorf("HTTP request failed: %w", err)
+    }
+    defer func() {
+        _ = resp.Body.Close()
+    }()
 
 	// Check status code
 	expectedStatus := check.ExpectStatus
@@ -171,7 +173,7 @@ func (cs *CheckScheduler) executeTCPCheck(check Check) error {
 	if err != nil {
 		return fmt.Errorf("TCP connection failed: %w", err)
 	}
-	conn.Close()
+    _ = conn.Close()
 
 	return nil
 }
@@ -245,20 +247,4 @@ func (cs *CheckScheduler) sendCheckNotification(check Check, message string) {
 	}
 }
 
-// startChecksScheduler creates and starts a check scheduler (compatibility function)
-func startChecksScheduler(checks []Check, getPID func() int, channels map[string]Channel, queue chan Notification) func() {
-	if len(checks) == 0 {
-		return func() {}
-	}
-
-	// Create a temporary worker pool adapter for compatibility
-	// This will be removed when we fully refactor main.go
-	tempPool := &WorkerPool{
-		queue: make(chan ActionRequest, 100),
-	}
-
-	scheduler := NewCheckScheduler(checks, getPID, channels, tempPool)
-	scheduler.Start()
-
-	return scheduler.Stop
-}
+// startChecksScheduler removed: legacy compatibility helper was unused

@@ -1,14 +1,11 @@
 package main
 
 import (
-	"os"
-	"os/exec"
-	"strings"
-	"sync"
-	"time"
-
-	"github.com/twmb/franz-go/pkg/kgo"
-	"golang.org/x/time/rate"
+    "os"
+    "os/exec"
+    "strings"
+    "sync"
+    "time"
 )
 
 // Global variables shared across modules
@@ -22,17 +19,12 @@ var (
 	restartTimesMu sync.Mutex
 	restartTimes   []time.Time
 
-	// Kafka clients map
-	kafkaClients map[string]*kgo.Client = make(map[string]*kgo.Client)
-
-	// Channel rate limiters
-	channelLimiters map[string]*rate.Limiter = make(map[string]*rate.Limiter)
-
 	// Metrics enable flag
 	metricsEnable bool
 
-	// Channels map for global access
-	channels map[string]Channel
+    // Channels map for global access
+    // nolint:unused  // referenced in tests
+    channels map[string]Channel
 )
 
 // TemplateData contains data available to templates

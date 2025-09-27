@@ -42,11 +42,13 @@ var version = "dev"
 
 // loadEnvFile loads environment variables from a .env file
 func loadEnvFile(filepath string) error {
-	file, err := os.Open(filepath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
+    file, err := os.Open(filepath)
+    if err != nil {
+        return err
+    }
+    defer func() {
+        _ = file.Close()
+    }()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -74,8 +76,10 @@ func loadEnvFile(filepath string) error {
 			}
 		}
 
-		// Set environment variable
-		os.Setenv(key, value)
+        // Set environment variable
+        if err := os.Setenv(key, value); err != nil {
+            log.Printf("green-orb warning: failed to set env %s: %v", key, err)
+        }
 	}
 
 	return scanner.Err()
@@ -313,10 +317,10 @@ func runObserved(ctx context.Context, configFilePath string, numWorkers int64, m
 
 		// Goroutine for passing signals
 		go func() {
-			for sig := range sigChan {
-				process_signal(observedCmd, sig)
-			}
-		}()
+            for sig := range sigChan {
+                _ = process_signal(observedCmd, sig)
+            }
+        }()
 
 		pid := observedCmd.Process.Pid
 		if metricsEnable {
@@ -341,8 +345,10 @@ func runObserved(ctx context.Context, configFilePath string, numWorkers int64, m
 		// Wait for all reading to be complete
 		wg.Wait()
 
-		// Wait for the command to finish
-		err = observedCmd.Wait()
+        // Wait for the command to finish
+        if err := observedCmd.Wait(); err != nil {
+            log.Printf("green-orb warning: observed process exited with error: %v", err)
+        }
 
 		// After cmd.Wait(), stop listening for signals
 		signal.Stop(sigChan)

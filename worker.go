@@ -226,8 +226,8 @@ func (wp *WorkerPool) executeRestart() {
 	shouldRestart = true
 	restartMutex.Unlock()
 
-	if observedCmd != nil && observedCmd.Process != nil {
-		observedCmd.Process.Signal(syscall.SIGTERM)
+    if observedCmd != nil && observedCmd.Process != nil {
+        _ = observedCmd.Process.Signal(syscall.SIGTERM)
 
 		if metricsEnable {
 			orbRestartsTotal.Inc()
@@ -245,8 +245,8 @@ func (wp *WorkerPool) executeKill() {
 	shouldRestart = false
 	restartMutex.Unlock()
 
-	if observedCmd != nil && observedCmd.Process != nil {
-		observedCmd.Process.Signal(syscall.SIGTERM)
+    if observedCmd != nil && observedCmd.Process != nil {
+        _ = observedCmd.Process.Signal(syscall.SIGTERM)
 	}
 }
 

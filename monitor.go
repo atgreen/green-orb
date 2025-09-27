@@ -87,11 +87,11 @@ func (m *Monitor) MonitorOutput(scanner *bufio.Scanner, isStderr bool) {
 
 		// Output the line if not suppressed
 		if !shouldSuppress {
-			if isStderr {
-				fmt.Fprintln(getStderr(), logLine)
-			} else {
-				fmt.Fprintln(getStdout(), logLine)
-			}
+            if isStderr {
+                _, _ = fmt.Fprintln(getStderr(), logLine)
+            } else {
+                _, _ = fmt.Fprintln(getStdout(), logLine)
+            }
 		}
 	}
 
