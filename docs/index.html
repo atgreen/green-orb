@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Green Orb — Observe and Report Buddy</title>
-    <meta name="description" content="Green Orb is a lightweight 'Observe and Report Buddy' that watches your app logs and triggers actions: notify, webhooks, Kafka, exec, restart/kill, and metrics." />
+    <meta name="description" content="Green Orb is a lightweight 'Observe and Report Buddy' that watches your app logs and schedules actions: notify, webhooks, Kafka, exec, restart/kill, metrics, and cron/interval tasks." />
     <meta property="og:title" content="Green Orb" />
-    <meta property="og:description" content="A lightweight monitoring sidecar that watches logs and triggers actions (notify, webhooks, Kafka, exec) with Prometheus metrics and checks." />
+    <meta property="og:description" content="A lightweight monitoring sidecar that watches logs and runs scheduled actions (notify, webhooks, Kafka, exec) with Prometheus metrics and checks." />
     <meta property="og:image" content="https://raw.githubusercontent.com/atgreen/green-orb/main/images/green-orb.png" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -35,7 +35,7 @@
         <a class="btn" href="https://github.com/atgreen/green-orb/releases">Download</a>
         <a class="btn" href="https://github.com/atgreen/green-orb">GitHub</a>
       </div>
-      <p class="synopsis">Wrap your app, watch logs, act fast. Green Orb turns patterns into actions—notify, webhooks, Kafka, or scripts—without code changes. Ideal for containers, on‑call speed, and pragmatic SRE automation.</p>
+      <p class="synopsis">Wrap your app, watch logs, act fast. Green Orb turns patterns into actions—notify, webhooks, Kafka, or scripts—and can run scheduled tasks via intervals or cron. No code changes. Ideal for containers, on‑call speed, and pragmatic SRE automation.</p>
     </header>
 
     <main class="container">
@@ -67,6 +67,10 @@
             <h3>Periodic Checks</h3>
             <p>HTTP/TCP checks + flapping detection.</p>
           </div>
+          <div class="card">
+            <h3>Scheduled Actions</h3>
+            <p>Run periodic tasks using intervals or cron.</p>
+          </div>
         </div>
       </section>
 
@@ -87,13 +91,26 @@ $ orb java -jar mywebapp.jar</code></pre>
       <section class="example">
         <h2>Minimal Example</h2>
 <pre><code>channels:
-  - name: "startup-email"
-    type: "notify"
+  - name: startup-email
+    type: notify
     url:  "smtp://USER:PASS@smtp.gmail.com:587/?from=USER@gmail.com&amp;to=USER@gmail.com&amp;subject=App%20Starting!"
 
 signals:
-  - regex: "Starting Application"
-    channel: "startup-email"</code></pre>
+  - regex: Starting Application
+    channel: startup-email</code></pre>
+        <h2>Scheduled Example</h2>
+<pre><code>channels:
+  - name: thread-dump
+    type: exec
+    shell: |
+      FILENAME=thread-dump-$(date +%s).txt
+      jstack "$ORB_PID" &gt; /tmp/${FILENAME}
+
+signals:
+  - name: periodic-stacktrace
+    channel: thread-dump
+    schedule:
+      every: 5m</code></pre>
         <p>Reference regex capture groups via environment variables <code>ORB_MATCH_1</code>, <code>ORB_MATCH_2</code>, … in <code>exec</code> channels.</p>
       </section>
 
