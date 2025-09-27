@@ -31,8 +31,7 @@ jobs:
       - name: Run orb over dummy process
         run: |
           set -euo pipefail
-          # Use a flagless command to avoid CI shell flag parsing issues
-          ./orb -c test-e2e.yaml -- /usr/bin/printf 'TRIGGER: alpha\n'
+          ./orb -c test-e2e.yaml run bash -lc 'echo TRIGGER: alpha'
       - name: Verify side effects
         run: |
           cat "$RUNNER_TEMP/e2e.txt"
