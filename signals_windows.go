@@ -30,10 +30,44 @@
 package main
 
 import (
+	"log"
 	"os"
 	"os/exec"
+	"syscall"
 )
 
+// process_signal handles signal forwarding on Windows
 func process_signal(observed_cmd *exec.Cmd, sig os.Signal) error {
-	return nil
+	if observed_cmd == nil || observed_cmd.Process == nil {
+		return nil
+	}
+
+	// On Windows, we can only handle certain signals
+	switch sig {
+	case os.Interrupt:
+		// CTRL+C event - send interrupt to the process
+		return sendCtrlC(observed_cmd.Process.Pid)
+	case os.Kill:
+		// Kill signal - forcefully terminate the process
+		return observed_cmd.Process.Kill()
+	case syscall.SIGTERM:
+		// Termination signal - gracefully terminate if possible
+		return observed_cmd.Process.Signal(os.Kill)
+	default:
+		// Other signals are not supported on Windows
+		log.Printf("green-orb warning: signal %v not supported on Windows", sig)
+		return nil
+	}
+}
+
+// sendCtrlC sends a CTRL+C event to a process on Windows
+func sendCtrlC(pid int) error {
+	// On Windows, we can use GenerateConsoleCtrlEvent to send CTRL+C
+	// However, this requires the process to be in the same console group
+	// For simplicity, we'll just kill the process
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+	return proc.Signal(os.Interrupt)
 }
