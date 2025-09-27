@@ -450,6 +450,10 @@ func main() {
 
 // runObserved contains the core execution logic for running and observing a subprocess.
 func runObserved(ctx context.Context, configFilePath string, numWorkers int64, metricsEnable bool, metricsAddr string, subprocessArgs []string) error {
+    // Drop any leading "--" separators that may be present after CLI parsing.
+    for len(subprocessArgs) > 0 && subprocessArgs[0] == "--" {
+        subprocessArgs = subprocessArgs[1:]
+    }
 	config := Config{}
 	if err := loadYAMLConfig(configFilePath, &config); err != nil {
 		log.Fatal("green-orb error: Failed to load config: ", err)
