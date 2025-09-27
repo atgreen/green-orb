@@ -1,12 +1,13 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
-	"io"
-	"log"
-	"os"
-	"time"
+    "bufio"
+    "errors"
+    "fmt"
+    "io"
+    "log"
+    "os"
+    "time"
 )
 
 // Monitor handles output monitoring from the observed process
@@ -95,9 +96,9 @@ func (m *Monitor) MonitorOutput(scanner *bufio.Scanner, isStderr bool) {
 		}
 	}
 
-	if err := scanner.Err(); err != nil && err != io.EOF {
-		log.Printf("green-orb error: Error reading from %s: %v", stream, err)
-	}
+    if err := scanner.Err(); err != nil && !errors.Is(err, io.EOF) {
+        log.Printf("green-orb error: Error reading from %s: %v", stream, err)
+    }
 }
 
 // getStdout returns the stdout writer (abstracted for testing)

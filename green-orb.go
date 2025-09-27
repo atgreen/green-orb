@@ -27,15 +27,15 @@
 package main
 
 import (
-	"bufio"
-	"context"
-	"fmt"
-	"log"
-	"os"
-	"os/exec"
-	"os/signal"
-	"strings"
-	"sync"
+    "bufio"
+    "errors"
+    "fmt"
+    "log"
+    "os"
+    "os/exec"
+    "os/signal"
+    "strings"
+    "sync"
 )
 
 var version = "dev"
@@ -168,9 +168,9 @@ func main() {
 		return
 	}
 
-	if err := runObserved(context.Background(), configFilePath, numWorkers, metricsAddr, envFile, !skipDotEnv, commandArgs); err != nil {
-		log.Fatal(err)
-	}
+    if err := runObserved(configFilePath, numWorkers, metricsAddr, envFile, !skipDotEnv, commandArgs); err != nil {
+        log.Fatal(err)
+    }
 }
 
 func parseWorkers(value string) (int64, error) {
@@ -219,7 +219,7 @@ COPYRIGHT:
 }
 
 // runObserved contains the core execution logic for running and observing a subprocess.
-func runObserved(ctx context.Context, configFilePath string, numWorkers int64, metricsAddr string, envFile string, loadDotEnv bool, subprocessArgs []string) error {
+func runObserved(configFilePath string, numWorkers int64, metricsAddr string, envFile string, loadDotEnv bool, subprocessArgs []string) error {
 	// Drop any leading "--" separators that may be present after CLI parsing.
 	for len(subprocessArgs) > 0 && subprocessArgs[0] == "--" {
 		subprocessArgs = subprocessArgs[1:]
@@ -291,7 +291,8 @@ func runObserved(ctx context.Context, configFilePath string, numWorkers int64, m
 	}
 
 	// Process restart loop
-	for shouldRestart {
+    var lastWaitErr error
+    for shouldRestart {
 		restartMutex.Lock()
 		shouldRestart = false
 		restartMutex.Unlock()
@@ -346,8 +347,9 @@ func runObserved(ctx context.Context, configFilePath string, numWorkers int64, m
 		wg.Wait()
 
         // Wait for the command to finish
-        if err := observedCmd.Wait(); err != nil {
-            log.Printf("green-orb warning: observed process exited with error: %v", err)
+        lastWaitErr = observedCmd.Wait()
+        if lastWaitErr != nil {
+            log.Printf("green-orb warning: observed process exited with error: %v", lastWaitErr)
         }
 
 		// After cmd.Wait(), stop listening for signals
@@ -369,12 +371,13 @@ func runObserved(ctx context.Context, configFilePath string, numWorkers int64, m
 	}
 
 	// Handle exit status
-	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			os.Exit(exitError.ExitCode())
-		}
-		log.Fatalf("green-orb error: Error waiting for Command: %v", err)
-	}
+    if lastWaitErr != nil {
+        var exitError *exec.ExitError
+        if errors.As(lastWaitErr, &exitError) {
+            os.Exit(exitError.ExitCode())
+        }
+        log.Fatalf("green-orb error: Error waiting for Command: %v", lastWaitErr)
+    }
 
 	return nil
 }

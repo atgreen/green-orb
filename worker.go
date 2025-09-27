@@ -63,10 +63,10 @@ func NewWorkerPool(numWorkers int, queueSize int, channels map[string]Channel, k
 
 // Start begins the worker goroutines
 func (wp *WorkerPool) Start() {
-	for i := 0; i < wp.numWorkers; i++ {
-		wp.wg.Add(1)
-		go wp.worker(i)
-	}
+    for i := 0; i < wp.numWorkers; i++ {
+        wp.wg.Add(1)
+        go wp.worker()
+    }
 }
 
 // Stop closes the queue and waits for workers to finish
@@ -100,12 +100,12 @@ func (wp *WorkerPool) Enqueue(req ActionRequest) bool {
 }
 
 // worker processes action requests from the queue
-func (wp *WorkerPool) worker(id int) {
-	defer wp.wg.Done()
+func (wp *WorkerPool) worker() {
+    defer wp.wg.Done()
 
-	for req := range wp.queue {
-		wp.processAction(req)
-	}
+    for req := range wp.queue {
+        wp.processAction(req)
+    }
 }
 
 // processAction executes a single action

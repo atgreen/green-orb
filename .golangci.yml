@@ -11,3 +11,11 @@ linters:
     - ineffassign
     - staticcheck
     - unused
+    - bodyclose
+    - errorlint
+    - misspell
+    - nilerr
+    - nolintlint
+    - nosprintfhostport
+    - unconvert
+    - unparam

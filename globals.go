@@ -23,7 +23,7 @@ var (
 	metricsEnable bool
 
     // Channels map for global access
-    // nolint:unused  // referenced in tests
+    //nolint:unused  // referenced in tests
     channels map[string]Channel
 )
 
