@@ -113,6 +113,7 @@ signals:
     channel: thread-dump
     schedule:
       cron: "0 * * * *"
+```
 
 ## Enabling/Disabling Signals at Runtime
 
