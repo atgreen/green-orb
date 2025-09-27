@@ -80,43 +80,83 @@ thread pool exhausted warning.
 
 ```
 channels:
-  - name: "startup-email"
-    type: "notify"
+  - name: startup-email
+    type: notify
     url:  "smtp://MYEMAIL@gmail.com:MYPASSWORD@smtp.gmail.com:587/?from=MYEMAIL@gmail.com&to=MYEMAIL@gmail.com&subject=Application%20Starting!"
 
-  - name: "thread-dump"
-    type: "exec"
+  - name: thread-dump
+    type: exec
     shell: |
       FILENAME=thread-dump-$(date).txt
       jstack $ORB_PID > /tmp/${FILENAME}
       aws s3 mv /tmp/${FILENAME} s3:/my-bucket/${FILENAME}
 
 signals:
-  - regex: "Starting Application"
-    channel: "startup-email"
+  - regex: Starting Application
+    channel: startup-email
 
   - regex: "Warning: thread pool exhausted"
-    channel: "thread-dump"
+    channel: thread-dump
 
 # Run a periodic action every 5 minutes as a schedule-type signal
 signals:
-  - name: "periodic-stacktrace"
-    channel: "thread-dump"
+  - name: periodic-stacktrace
+    channel: thread-dump
     schedule:
       every: 5m
 
 # Or, run at the top of every hour using cron
 signals:
-  - name: "hourly-stacktrace"
-    channel: "thread-dump"
+  - name: hourly-stacktrace
+    channel: thread-dump
     schedule:
       cron: "0 * * * *"
+
+## Enabling/Disabling Signals at Runtime
+
+Use `enable_signal` and `disable_signal` channels to control a named signal (regex or schedule) dynamically. Signals are enabled by default; you can set `enabled: false` on a signal to start disabled.
+
+Example: enable a schedule signal for 1 hour when a pattern is observed, and provide a separate disable:
+
+```
+channels:
+  # Turns on the schedule signal for 1 hour
+  - name: enable-stacktrace-1h
+    type: enable_signal
+    target_signal: periodic-stacktrace
+    duration: 1h
+
+  # Turns off the schedule signal immediately
+  - name: disable-stacktrace
+    type: disable_signal
+    target_signal: periodic-stacktrace
+
+signals:
+  # The schedule-style signal we want to control
+  - name: periodic-stacktrace
+    channel: thread-dump
+    schedule:
+      every: 5m
+
+  # When this regex matches, enable periodic stack traces for 1h
+  - regex: Enable stack traces
+    channel: enable-stacktrace-1h
+
+  # Optional: log pattern to stop early
+  - regex: Disable stack traces
+    channel: disable-stacktrace
+```
+
+Notes:
+- `target_signal` must match the `name` of the signal to control.
+- `duration` is optional and only applies to enable; after it elapses, the signal auto-disables.
+- These fields support templates, so you can compute names or durations from matches or env if needed.
+- To start a signal disabled at boot, add `enabled: false` to that signal definition.
 
 Notes:
 - Use `schedule.every` for fixed intervals (Go duration strings like `30s`, `5m`, `1h`).
 - Use `schedule.cron` for cron-like schedules (5 fields; seconds optional). Cron runs in the system timezone.
 - Provide exactly one of `every` or `cron` per signal.
-```
 
 `orb` does not interfere with the execution of your application.  All
 console logs still go to the console, Linux and macOS signals
@@ -147,14 +187,14 @@ reference the same channel.
 
 All channel definitions must have a `name` and a `type`.  Signals
 reference channels by `name`.  The channel's `type` must be one of
-`notify`, `kafka`, `exec`, `suppress`, `restart` or `kill`.  These
+`notify`, `kafka`, `exec`, `suppress`, `restart`, `kill`, or `signal_toggle`. These
 types are described below.
 
 ### Channel Configuration Reference
 
 Common fields (may vary by type):
 - `name` (string): referenced by signals.
-- `type` (string): `notify`, `kafka`, `exec`, `suppress`, `restart`, `kill`.
+- `type` (string): `notify`, `kafka`, `exec`, `suppress`, `restart`, `kill`, `signal_toggle`.
 - `url` (string, notify): destination URL (Go text/template supported).
 - `template` (string, notify): message template (optional).
 - `broker` (string, kafka): Kafka bootstrap.
@@ -218,8 +258,8 @@ As an example, here's a channel that sends an email containing json
 data with the observed PID in the email subject line:
 
 ```
-  - name: "email-on-startup"
-    type: "notify"
+  - name: email-on-startup
+    type: notify
     url:  "smtp://EMAIL@gmail.com:PASSWORD@smtp.gmail.com:587/?from=EMAIL@gmail.com&to=EMAIL@gmail.com&subject=Starting%20process%20{{.PID}}!"
     template: "{ \"timestamp\": \"{{.Timestamp}}\", \"message\": \"{{.Logline}}\" }"
 ```
@@ -227,8 +267,8 @@ data with the observed PID in the email subject line:
 Here's an example using environment variables from `.env` for secure configuration:
 
 ```
-  - name: "slack-alerts"
-    type: "notify"
+  - name: slack-alerts
+    type: notify
     url:  "slack://{{.Env.SLACK_BOT_TOKEN}}@{{.Env.SLACK_CHANNEL}}"
     template: "🚨 Alert from {{.Env.APP_NAME}}: {{.Logline}}"
 ```
@@ -251,10 +291,10 @@ The channel type `kafka` is for sending messages to a kafka broker.
 You must specify a broker and topic in your definition, like so:
 
 ```
-  - name: "kafka-alerts"
-    type: "kafka"
-    broker: "mybroker.example.com:9092"
-    topic: "orb-alerts"
+  - name: kafka-alerts
+    type: kafka
+    broker: mybroker.example.com:9092
+    topic: orb-alerts
 ```
 
 Producer timeouts are currently fixed at 5 seconds.
@@ -262,13 +302,13 @@ Producer timeouts are currently fixed at 5 seconds.
 Optional authentication and TLS:
 
 ```
-  - name: "kafka-secure"
-    type: "kafka"
-    broker: "mybroker.example.com:9093"
-    topic: "orb-alerts"
+  - name: kafka-secure
+    type: kafka
+    broker: mybroker.example.com:9093
+    topic: orb-alerts
     # SASL/PLAIN example
     sasl_mechanism: "plain"
-    sasl_username: "myuser"
+    sasl_username: myuser
     sasl_password: "mypassword"
     # TLS options
     tls: true
@@ -292,8 +332,8 @@ dump java thread stacks to a file that is copied into an s3 bucket for
 later examination.
 
 ```
-  - name: "thread-dump"
-    type: "exec"
+  - name: thread-dump
+    type: exec
     shell: |
       FILENAME=thread-dump-$(date).txt
       jstack "$ORB_PID" > /tmp/${FILENAME}
@@ -305,8 +345,8 @@ You can also reference capture groups from your regex using `ORB_MATCH_1`,
 `ORB_MATCH_2`, etc. For example, to echo the first capture group:
 
 ```
-  - name: "dump-first-match"
-    type: "exec"
+  - name: dump-first-match
+    type: exec
     shell: |
       echo "First match: $ORB_MATCH_1" >> /tmp/matches.txt
 ```
@@ -323,6 +363,7 @@ Green Orb can expose Prometheus metrics for monitoring throughput and behavior.
 - Exposes `/metrics` with counters, histograms and gauges, including:
   - `orb_events_total{stream}`: lines processed per stream (`stdout|stderr`).
   - `orb_signals_matched_total{signal,channel}`: regex matches.
+  - `orb_schedules_fired_total{signal,channel,kind}`: schedule signal firings; kind is `every` or `cron`.
   - `orb_actions_total{channel,type,outcome}`: actions executed and result.
   - `orb_action_latency_seconds{channel,type}`: action latency.
   - `orb_dropped_events_total{reason}`: dropped events (`queue_full|rate_limited`).
@@ -359,8 +400,8 @@ To prevent backpressure and notification storms, Green Orb uses a non-blocking q
 
 ```
 channels:
-  - name: "slack-alerts"
-    type: "notify"
+  - name: slack-alerts
+    type: notify
     url:  "slack://..."
     rate_per_sec: 2.0   # average 2 actions per second
     burst: 5            # allow short bursts
@@ -387,7 +428,7 @@ checks:
     type: http
     url: https://example.com/health
     expect_status: 200
-    body_regex: "OK"           # optional
+    body_regex: OK           # optional
     interval: 30s
     timeout: 5s
     channel: email_alerts
