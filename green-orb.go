@@ -34,7 +34,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"strings"
 	"sync"
 
 	"github.com/urfave/cli/v3"
@@ -52,7 +51,6 @@ func main() {
 		HideHelpCommand: true,
 		Version:         version,
 		Usage:           "Your observe-and-report buddy",
-		DefaultCommand:  "run",
 		Copyright:       "Copyright (C) 2023-2025  Anthony Green <green@moxielogic.com>.\nDistributed under the terms of the MIT license.\nSee https://github.com/atgreen/green-orb for details.",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -96,66 +94,9 @@ func main() {
 			}
 			return runObserved(ctx, configFilePath, numWorkers, metricsAddr, cmd.Args().Slice())
 		},
-		Commands: []*cli.Command{
-			{
-				Name:            "run",
-				Usage:           "Run an observed command; stops flag parsing at the first non-flag",
-				SkipFlagParsing: true,
-				Action: func(ctx context.Context, c *cli.Command) error {
-					if c.NArg() == 0 {
-						cli.ShowCommandHelp(ctx, c, "run")
-						return nil
-					}
-					return runObserved(ctx, configFilePath, numWorkers, metricsAddr, c.Args().Slice())
-				},
-			},
-		},
 	}
 
-	// Ensure subcommand token precedes the observed command, so flags afterwards (e.g., -lc) aren't parsed by orb.
-	// If user didn't specify a subcommand, inject "run" before the first non-flag token.
-	args := os.Args
-	if len(args) > 1 {
-		valueFlags := map[string]bool{"config": true, "workers": true, "metrics-addr": true}
-		i := 1
-		for i < len(args) {
-			a := args[i]
-			if a == "--" {
-				// explicit separator: next token starts observed command
-				i++
-				break
-			}
-			if !strings.HasPrefix(a, "-") {
-				break
-			}
-			if strings.HasPrefix(a, "--") {
-				name := a[2:]
-				if eq := strings.IndexByte(name, '='); eq >= 0 {
-					name = name[:eq]
-				}
-				if valueFlags[name] && !strings.Contains(a, "=") {
-					i += 2
-				} else {
-					i += 1
-				}
-			} else {
-				if a == "-c" || a == "-w" {
-					i += 2
-				} else {
-					i += 1
-				}
-			}
-		}
-		// If next token is not an explicit subcommand, inject "run"
-		if i < len(args) && args[i] != "run" {
-			tmp := make([]string, 0, len(args)+1)
-			tmp = append(tmp, args[:i]...)
-			tmp = append(tmp, "run")
-			tmp = append(tmp, args[i:]...)
-			args = tmp
-		}
-	}
-	if err := cmd.Run(context.Background(), args); err != nil {
+	if err := cmd.Run(context.Background(), os.Args); err != nil {
 		log.Fatal(err)
 	}
 }
