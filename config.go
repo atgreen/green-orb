@@ -172,12 +172,16 @@ func validateConfig(config *Config) error {
             if sig.Name == "" {
                 return fmt.Errorf("signal %d with 'schedule' must have a 'name'", i)
             }
+            if sig.Schedule.Every != "" && sig.Schedule.Cron != "" {
+                return fmt.Errorf("signal %d schedule must specify only one of 'every' or 'cron'", i)
+            }
             if sig.Schedule.Every != "" {
                 if _, err := time.ParseDuration(sig.Schedule.Every); err != nil {
                     return fmt.Errorf("signal %d has invalid schedule.every: %w", i, err)
                 }
-            } else if sig.Schedule.Cron != "" {
-                return fmt.Errorf("signal %d uses 'schedule.cron' which is not yet supported; use 'schedule.every' instead", i)
+            }
+            if sig.Schedule.Cron != "" {
+                // Basic presence validation; detailed cron spec is validated at runtime by cron parser
             }
         }
     }

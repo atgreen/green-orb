@@ -4,6 +4,7 @@ go 1.25.1
 
 require (
 	github.com/nicholas-fedor/shoutrrr v0.9.1
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/prometheus/client_golang v1.20.3
 	github.com/prometheus/client_model v0.6.1
 	github.com/twmb/franz-go v1.19.5

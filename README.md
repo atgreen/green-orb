@@ -105,8 +105,17 @@ signals:
     schedule:
       every: 5m
 
-Note: cron-style expressions are planned but not yet supported; use
-`schedule.every` with Go duration strings (e.g., `30s`, `5m`, `1h`).
+# Or, run at the top of every hour using cron
+signals:
+  - name: "hourly-stacktrace"
+    channel: "thread-dump"
+    schedule:
+      cron: "0 * * * *"
+
+Notes:
+- Use `schedule.every` for fixed intervals (Go duration strings like `30s`, `5m`, `1h`).
+- Use `schedule.cron` for cron-like schedules (5 fields; seconds optional). Cron runs in the system timezone.
+- Provide exactly one of `every` or `cron` per signal.
 ```
 
 `orb` does not interfere with the execution of your application.  All

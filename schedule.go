@@ -4,6 +4,8 @@ import (
     "fmt"
     "log"
     "time"
+
+    cronlib "github.com/robfig/cron/v3"
 )
 
 // Schedule is an internal representation of a time-based signal
@@ -43,6 +45,8 @@ type ScheduleRunner struct {
     channels  map[string]Channel
     workerPool *WorkerPool
     stopChan  chan struct{}
+    tickers   []*time.Ticker
+    cron      *cronlib.Cron
 }
 
 // NewScheduleRunner creates a new schedule runner
@@ -58,39 +62,54 @@ func NewScheduleRunner(schedules []Schedule, getPID func() int, channels map[str
 
 // Start begins all configured schedules
 func (sr *ScheduleRunner) Start() {
+    // Initialize cron with 5-field standard plus optional seconds support
+    sr.cron = cronlib.New(cronlib.WithParser(cronlib.NewParser(
+        cronlib.SecondOptional | cronlib.Minute | cronlib.Hour | cronlib.Dom | cronlib.Month | cronlib.Dow | cronlib.Descriptor,
+    )))
+
     for _, s := range sr.schedules {
-        // Only support Every for now; Cron validation is done earlier
-        if s.Every == "" {
-            continue
-        }
-        interval, err := time.ParseDuration(s.Every)
-        if err != nil {
-            log.Printf("green-orb error: invalid schedule interval for %s: %v", s.Name, err)
-            continue
-        }
-
-        ticker := time.NewTicker(interval)
-
-        go func(sched Schedule) {
-            defer ticker.Stop()
-            for {
-                select {
-                case <-ticker.C:
-                    sr.trigger(sched)
-                case <-sr.stopChan:
-                    return
-                }
+        if s.Every != "" {
+            interval, err := time.ParseDuration(s.Every)
+            if err != nil {
+                log.Printf("green-orb error: invalid schedule interval for %s: %v", s.Name, err)
+                continue
             }
-        }(s)
+            ticker := time.NewTicker(interval)
+            sr.tickers = append(sr.tickers, ticker)
+            go func(sched Schedule, tk *time.Ticker) {
+                for {
+                    select {
+                    case <-tk.C:
+                        sr.trigger(sched, "every")
+                    case <-sr.stopChan:
+                        tk.Stop()
+                        return
+                    }
+                }
+            }(s, ticker)
+            continue
+        }
+        if s.Cron != "" {
+            // Add cron job
+            sched := s
+            _, err := sr.cron.AddFunc(s.Cron, func() { sr.trigger(sched, "cron") })
+            if err != nil {
+                log.Printf("green-orb error: invalid cron spec for %s: %v", s.Name, err)
+            }
+        }
     }
+    sr.cron.Start()
 }
 
 // Stop stops all schedules
 func (sr *ScheduleRunner) Stop() {
     close(sr.stopChan)
+    if sr.cron != nil {
+        sr.cron.Stop()
+    }
 }
 
-func (sr *ScheduleRunner) trigger(sched Schedule) {
+func (sr *ScheduleRunner) trigger(sched Schedule, kind string) {
     ch, ok := sr.channels[sched.Channel]
     if !ok {
         log.Printf("green-orb warning: schedule %s references unknown channel %s", sched.Name, sched.Channel)
@@ -110,5 +129,9 @@ func (sr *ScheduleRunner) trigger(sched Schedule) {
 
     if !sr.workerPool.Enqueue(req) {
         log.Printf("green-orb warning: dropped schedule action for %s (queue full or rate limited)", sched.Name)
+    }
+
+    if metricsEnable {
+        orbSchedulesFiredTotal.WithLabelValues(sched.Name, ch.Name, kind).Inc()
     }
 }

@@ -75,13 +75,21 @@ var (
 		},
 	)
 
-	orbChecksTotal = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "orb_checks_total",
-			Help: "Total checks executed by type and outcome",
-		},
-		[]string{"type", "outcome"},
-	)
+    orbChecksTotal = promauto.NewCounterVec(
+        prometheus.CounterOpts{
+            Name: "orb_checks_total",
+            Help: "Total checks executed by type and outcome",
+        },
+        []string{"type", "outcome"},
+    )
+
+    orbSchedulesFiredTotal = promauto.NewCounterVec(
+        prometheus.CounterOpts{
+            Name: "orb_schedules_fired_total",
+            Help: "Total schedule signal firings by name, channel, and kind",
+        },
+        []string{"signal", "channel", "kind"},
+    )
 )
 
 func StartMetricsServer(addr string) {
