@@ -405,7 +405,8 @@ func main() {
             },
         },
     }
-    // Insert a "--" before the first non-flag arg so flags after the command (e.g., bash -lc) aren't parsed by orb
+    // Ensure subcommand token precedes the observed command, so flags afterwards (e.g., -lc) aren't parsed by orb.
+    // If user didn't specify a subcommand, inject "run" before the first non-flag token.
     args := os.Args
     if len(args) > 1 {
         valueFlags := map[string]bool{"config": true, "workers": true, "metrics-addr": true}
@@ -413,15 +414,11 @@ func main() {
         for i < len(args) {
             a := args[i]
             if a == "--" {
+                // explicit separator: next token starts observed command
+                i++
                 break
             }
             if !strings.HasPrefix(a, "-") {
-                // insert -- at position i
-                tmp := make([]string, 0, len(args)+1)
-                tmp = append(tmp, args[:i]...)
-                tmp = append(tmp, "--")
-                tmp = append(tmp, args[i:]...)
-                args = tmp
                 break
             }
             if strings.HasPrefix(a, "--") {
@@ -435,13 +432,20 @@ func main() {
                     i += 1
                 }
             } else {
-                // short flags like -c or -w may take a value; conservatively skip next for these
                 if a == "-c" || a == "-w" {
                     i += 2
                 } else {
                     i += 1
                 }
             }
+        }
+        // If next token is not an explicit subcommand, inject "run"
+        if i < len(args) && args[i] != "run" {
+            tmp := make([]string, 0, len(args)+1)
+            tmp = append(tmp, args[:i]...)
+            tmp = append(tmp, "run")
+            tmp = append(tmp, args[i:]...)
+            args = tmp
         }
     }
     if err := cmd.Run(context.Background(), args); err != nil {
