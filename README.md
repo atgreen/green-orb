@@ -7,13 +7,14 @@
 
 Green Orb is a lightweight monitoring tool that enhances your
 application's reliability by observing its console output for specific
-patterns and executing predefined actions in response. Designed to
-integrate seamlessly, it's deployed as a single executable binary that
-runs your application as a subprocess, where it can monitor all
-console output, making it particularly useful in containerized
-environments. Green Orb acts as a proactive assistant, handling
-essential monitoring tasks and enabling SREs to automate responses to
-critical system events effectively.
+patterns and executing predefined actions in response. In addition to
+regex-driven signals, Green Orb can run scheduled actions on fixed
+intervals or cron schedules. Designed to integrate seamlessly, it's
+deployed as a single executable binary that runs your application as a
+subprocess, where it can monitor all console output and schedule
+periodic tasks—ideal for containerized environments. Green Orb acts as
+a proactive assistant, handling essential monitoring tasks and enabling
+SREs to automate responses to critical system events effectively.
 
 ## Features
 
@@ -23,6 +24,7 @@ With Green Orb, you can:
 - **Trigger Webhooks**: Integrate with services like Ansible Automation Platform through webhooks for seamless automation.
 - **Publish to Kafka**: Send important alerts or logs directly to a Kafka topic for real-time processing.
 - **Execute Commands**: Run shell commands automatically, allowing actions like capturing thread dumps of the observed process.
+- **Scheduled Actions**: Run periodic tasks via intervals (every) or cron.
 - **Manage Processes**: Restart or kill the observed process to maintain desired state or recover from issues.
 - **Export Metrics**: Expose Prometheus metrics for observability and alerting.
 - **Environment Management**: Automatically load `.env` files to configure your application environment securely.
@@ -153,7 +155,7 @@ Notes:
 - These fields support templates, so you can compute names or durations from matches or env if needed.
 - To start a signal disabled at boot, add `enabled: false` to that signal definition.
 
-Notes:
+Scheduling notes:
 - Use `schedule.every` for fixed intervals (Go duration strings like `30s`, `5m`, `1h`).
 - Use `schedule.cron` for cron-like schedules (5 fields; seconds optional). Cron runs in the system timezone.
 - Provide exactly one of `every` or `cron` per signal.
