@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"regexp"
 	"sync"
 	"time"
@@ -164,9 +165,9 @@ func (cs *CheckScheduler) executeTCPCheck(check Check) error {
 		}
 	}
 
-	// Attempt connection
-	address := fmt.Sprintf("%s:%d", check.Host, check.Port)
-	conn, err := net.DialTimeout("tcp", address, timeout)
+    // Attempt connection (use JoinHostPort for IPv4/IPv6 compatibility)
+    address := net.JoinHostPort(check.Host, strconv.Itoa(check.Port))
+    conn, err := net.DialTimeout("tcp", address, timeout)
 	if err != nil {
 		return fmt.Errorf("TCP connection failed: %w", err)
 	}
