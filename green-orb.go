@@ -241,8 +241,8 @@ func runObserved(configFilePath string, numWorkers int64, metricsAddr string, en
 		}
 	}
 
-	// Load and validate configuration
-	config, err := LoadConfig(configFilePath)
+    // Load and validate configuration
+    config, err := LoadConfig(configFilePath)
 	if err != nil {
 		log.Fatalf("green-orb error: Failed to load config: %v", err)
 	}
@@ -254,8 +254,8 @@ func runObserved(configFilePath string, numWorkers int64, metricsAddr string, en
 	}
 	defer kafkaManager.Close()
 
-	// Compile signals
-	compiledSignals, err := CompileSignals(config.Signals)
+    // Compile signals
+    compiledSignals, err := CompileSignals(config.Signals)
 	if err != nil {
 		log.Fatalf("green-orb error: Failed to compile signals: %v", err)
 	}
@@ -328,11 +328,11 @@ func runObserved(configFilePath string, numWorkers int64, metricsAddr string, en
 			orbObservedPID.Set(float64(pid))
 		}
 
-		// Create monitor and start monitoring
-		monitor := NewMonitor(pid, compiledSignals, workerPool, channelMap)
+    // Create monitor and start monitoring
+    monitor := NewMonitor(pid, compiledSignals, workerPool, channelMap)
 
 		var wg sync.WaitGroup
-		wg.Add(2)
+        wg.Add(2)
 
 		go func() {
 			defer wg.Done()
@@ -343,8 +343,17 @@ func runObserved(configFilePath string, numWorkers int64, metricsAddr string, en
 			monitor.MonitorOutput(bufio.NewScanner(stderr), true)
 		}()
 
-		// Wait for all reading to be complete
-		wg.Wait()
+        // Start time-based signals (schedules) if configured
+        var scheduleRunner *ScheduleRunner
+        schedules := BuildSchedulesFromSignals(config.Signals)
+        if len(schedules) > 0 {
+            scheduleRunner = NewScheduleRunner(schedules, func() int { return pid }, channelMap, workerPool)
+            scheduleRunner.Start()
+            defer scheduleRunner.Stop()
+        }
+
+        // Wait for all reading to be complete
+        wg.Wait()
 
         // Wait for the command to finish
         lastWaitErr = observedCmd.Wait()

@@ -97,6 +97,16 @@ signals:
 
   - regex: "Warning: thread pool exhausted"
     channel: "thread-dump"
+
+# Run a periodic action every 5 minutes as a schedule-type signal
+signals:
+  - name: "periodic-stacktrace"
+    channel: "thread-dump"
+    schedule:
+      every: 5m
+
+Note: cron-style expressions are planned but not yet supported; use
+`schedule.every` with Go duration strings (e.g., `30s`, `5m`, `1h`).
 ```
 
 `orb` does not interfere with the execution of your application.  All
@@ -106,20 +116,23 @@ application is returned through `orb`.
 
 ## Channels and Signals
 
-In Green Orb, "channels" and "signals" are foundational concepts:
+In Green Orb, "channels", "signals", and "schedules" are foundational concepts:
 
 - Signals: Mappings of regular expressions to channels. When a
   signal's regex matches a log entry, the corresponding channel is
   invoked.
 
+- Schedules: Time-based triggers that invoke channels at fixed
+  intervals. Use these to run periodic actions such as generating a
+  stack trace every 5 minutes.
+
 - Channels: Define the action to take and how. For example, the above
   `startup-email` channel defines how to send a message to a specific
   SMTP server.
 
-Channels and signals are defined in your `orb` config file.  A config
-file can define any number of channels and signals.  Each signal maps
-to a single channel.  However, multiple signals can map to the same
-channel.
+Channels, signals, and schedules are defined in your `orb` config file.
+Each signal maps to a single channel. Multiple signals and schedules can
+reference the same channel.
 
 ## Channel Details
 

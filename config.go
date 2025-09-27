@@ -1,18 +1,19 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"regexp"
+    "fmt"
+    "os"
+    "regexp"
+    "time"
 
-	"gopkg.in/yaml.v3"
+    "gopkg.in/yaml.v3"
 )
 
 // Config represents the complete green-orb configuration
 type Config struct {
-	Channels []Channel `yaml:"channels"`
-	Signals  []Signal  `yaml:"signals"`
-	Checks   []Check   `yaml:"checks"`
+    Channels []Channel `yaml:"channels"`
+    Signals  []Signal  `yaml:"signals"`
+    Checks   []Check   `yaml:"checks"`
 }
 
 // Channel represents a notification/action channel
@@ -40,9 +41,19 @@ type Channel struct {
 
 // Signal represents a log pattern to channel mapping
 type Signal struct {
-	Regex   string `yaml:"regex"`
-	Channel string `yaml:"channel"`
+    Name     string        `yaml:"name,omitempty"`
+    Regex    string        `yaml:"regex,omitempty"`
+    Channel  string        `yaml:"channel"`
+    Schedule *ScheduleSpec `yaml:"schedule,omitempty"`
 }
+
+// ScheduleSpec describes the time-based trigger for a signal
+type ScheduleSpec struct {
+    Every string `yaml:"every,omitempty"`
+    Cron  string `yaml:"cron,omitempty"`
+}
+
+// (no top-level schedules; schedule is part of Signal)
 
 // Check represents a periodic health check configuration
 type Check struct {
@@ -136,74 +147,96 @@ func validateConfig(config *Config) error {
 		}
 	}
 
-	// Validate signals
-	for i, sig := range config.Signals {
-		if sig.Regex == "" {
-			return fmt.Errorf("signal %d missing required 'regex' field", i)
-		}
-		if sig.Channel == "" {
-			return fmt.Errorf("signal %d missing required 'channel' field", i)
-		}
-		if !channelMap[sig.Channel] {
-			return fmt.Errorf("signal references non-existent channel: %s", sig.Channel)
-		}
-		// Validate regex compilation
-		if _, err := regexp.Compile(sig.Regex); err != nil {
-			return fmt.Errorf("invalid regex in signal %d: %w", i, err)
-		}
-	}
+    // Validate signals (regex or schedule)
+    for i, sig := range config.Signals {
+        if sig.Channel == "" {
+            return fmt.Errorf("signal %d missing required 'channel' field", i)
+        }
+        if !channelMap[sig.Channel] {
+            return fmt.Errorf("signal references non-existent channel: %s", sig.Channel)
+        }
 
-	// Validate checks
-	for _, check := range config.Checks {
-		if check.Name == "" {
-			return fmt.Errorf("check missing required 'name' field")
-		}
-		if check.Channel == "" {
-			return fmt.Errorf("check '%s' missing required 'channel' field", check.Name)
-		}
-		if !channelMap[check.Channel] {
-			return fmt.Errorf("check '%s' references non-existent channel: %s", check.Name, check.Channel)
-		}
+        hasRegex := sig.Regex != ""
+        hasSchedule := sig.Schedule != nil && (sig.Schedule.Every != "" || sig.Schedule.Cron != "")
+        if !hasRegex && !hasSchedule {
+            return fmt.Errorf("signal %d must specify either 'regex' or 'schedule'", i)
+        }
 
-		// Type-specific validation
-		switch check.Type {
-		case "http":
-			if check.URL == "" {
-				return fmt.Errorf("http check '%s' missing required 'url' field", check.Name)
-			}
-		case "tcp":
-			if check.Host == "" {
-				return fmt.Errorf("tcp check '%s' missing required 'host' field", check.Name)
-			}
-			if check.Port == 0 {
-				return fmt.Errorf("tcp check '%s' missing required 'port' field", check.Name)
-			}
-		case "flapping":
-			if check.RestartThreshold <= 0 {
-				return fmt.Errorf("flapping check '%s' missing or invalid 'restart_threshold' field", check.Name)
-			}
-		default:
-			return fmt.Errorf("invalid check type '%s' for check '%s'", check.Type, check.Name)
-		}
-	}
+        if hasRegex {
+            if _, err := regexp.Compile(sig.Regex); err != nil {
+                return fmt.Errorf("invalid regex in signal %d: %w", i, err)
+            }
+        }
+        if hasSchedule {
+            // Require a name for schedule signals
+            if sig.Name == "" {
+                return fmt.Errorf("signal %d with 'schedule' must have a 'name'", i)
+            }
+            if sig.Schedule.Every != "" {
+                if _, err := time.ParseDuration(sig.Schedule.Every); err != nil {
+                    return fmt.Errorf("signal %d has invalid schedule.every: %w", i, err)
+                }
+            } else if sig.Schedule.Cron != "" {
+                return fmt.Errorf("signal %d uses 'schedule.cron' which is not yet supported; use 'schedule.every' instead", i)
+            }
+        }
+    }
+
+    // Validate checks
+    for _, check := range config.Checks {
+        if check.Name == "" {
+            return fmt.Errorf("check missing required 'name' field")
+        }
+        if check.Channel == "" {
+            return fmt.Errorf("check '%s' missing required 'channel' field", check.Name)
+        }
+        if !channelMap[check.Channel] {
+            return fmt.Errorf("check '%s' references non-existent channel: %s", check.Name, check.Channel)
+        }
+
+        // Type-specific validation
+        switch check.Type {
+        case "http":
+            if check.URL == "" {
+                return fmt.Errorf("http check '%s' missing required 'url' field", check.Name)
+            }
+        case "tcp":
+            if check.Host == "" {
+                return fmt.Errorf("tcp check '%s' missing required 'host' field", check.Name)
+            }
+            if check.Port == 0 {
+                return fmt.Errorf("tcp check '%s' missing required 'port' field", check.Name)
+            }
+        case "flapping":
+            if check.RestartThreshold <= 0 {
+                return fmt.Errorf("flapping check '%s' missing or invalid 'restart_threshold' field", check.Name)
+            }
+        default:
+            return fmt.Errorf("invalid check type '%s' for check '%s'", check.Type, check.Name)
+        }
+    }
 
 	return nil
 }
 
 // CompileSignals compiles all signal regex patterns
 func CompileSignals(signals []Signal) ([]CompiledSignal, error) {
-	var compiledSignals []CompiledSignal
-	for _, signal := range signals {
-		re, err := regexp.Compile(signal.Regex)
-		if err != nil {
-			return nil, fmt.Errorf("failed to compile regex '%s': %w", signal.Regex, err)
-		}
-		compiledSignals = append(compiledSignals, CompiledSignal{
-			Regex:   re,
-			Channel: signal.Channel,
-		})
-	}
-	return compiledSignals, nil
+    var compiledSignals []CompiledSignal
+    for _, signal := range signals {
+        if signal.Regex == "" {
+            // skip schedule-only signals here
+            continue
+        }
+        re, err := regexp.Compile(signal.Regex)
+        if err != nil {
+            return nil, fmt.Errorf("failed to compile regex '%s': %w", signal.Regex, err)
+        }
+        compiledSignals = append(compiledSignals, CompiledSignal{
+            Regex:   re,
+            Channel: signal.Channel,
+        })
+    }
+    return compiledSignals, nil
 }
 
 // CreateChannelMap creates a map from channel names to channels
