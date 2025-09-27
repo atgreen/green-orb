@@ -155,6 +155,7 @@ Notes:
 - `duration` is optional and only applies to enable; after it elapses, the signal auto-disables.
 - These fields support templates, so you can compute names or durations from matches or env if needed.
 - To start a signal disabled at boot, add `enabled: false` to that signal definition.
+- When the observed process restarts (via a `restart` channel or external cause), all signal enable/disable states are reset to their configured startup defaults.
 
 Scheduling notes:
 - Use `schedule.every` for fixed intervals (Go duration strings like `30s`, `5m`, `1h`).
