@@ -3,48 +3,54 @@ channels:
 
 # Launch an Ansible job. Important data is in environment variables.
 
-  - name: "launch-ansible-job-template"
-    type: "notify"
+  - name: launch-ansible-job-template
+    type: notify
     url: "generic+https://{{.Env.AAP_USER}}:{{.Env.AAP_PASSWORD}}@{{.Env.AAP_HOST}}/api/v2/job_templates/14/launch/"
 
 # Send an email.
 
-  - name: "email_alerts"
-    type: "notify"
-    url:  "smtp://{{.Env.SENDER_EMAIL}:{{.Env.SENDER_PASSWORD}}@smtp.gmail.com:587/?from={{.Env.SENDER_EMAIL}}&to={{.Env.RECIPIENT_EMAIL}}&subject=Go%20Alert!"
+  - name: email_alerts
+    type: notify
+    url:  "smtp://{{.Env.SENDER_EMAIL}}:{{.Env.SENDER_PASSWORD}}@smtp.gmail.com:587/?from={{.Env.SENDER_EMAIL}}&to={{.Env.RECIPIENT_EMAIL}}&subject=Go%20Alert!"
     template: "Just started process {{.PID}} on {{.Env.HOSTNAME}}"
     rate_per_sec: 2.0
     burst: 5
 
 # Produce a kafka message.
 
-  - name: "kafka-test"
-    type: "kafka"
-    broker: "localhost:9632" # notsecret
-    topic: "orb-messages"
+  - name: kafka-test
+    type: kafka
+    broker: localhost:9632 # notsecret
+    topic: orb-messages
 
 # Restart the process
 
-  - name: "restart-test"
-    type: "restart"
+  - name: restart-test
+    type: restart
 
-  - name: "jdump"
-    type: "exec"
+  - name: jdump
+    type: exec
     shell: |
       jstack $ORB_PID > /tmp/jdump-$(date).txt 2>&1
 
 # Don't show this
 
-  - name: "hide"
-    type: "suppress"
+  - name: hide
+    type: suppress
 
 signals:
 
-  - regex: "some log output"
-    channel: "launch-ansible-job-template"
+  - regex: some log output
+    channel: launch-ansible-job-template
 
   - regex: "^Error:"
-    channel: "jdump"
+    channel: jdump
 
-  - regex: "README.md"
-    channel: "hide"
+  - regex: README.md
+    channel: hide
+
+  # Example scheduled activity every 5 minutes
+  - name: periodic-stacktrace
+    channel: jdump
+    schedule:
+      every: 5m
