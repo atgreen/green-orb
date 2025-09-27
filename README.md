@@ -45,7 +45,7 @@ $ java -jar mywebapp.jar
 ```
 ...use...
 ```
-$ orb run java -jar mywebapp.jar
+$ orb java -jar mywebapp.jar
 ```
 
 Or, if you are using containers, change...
@@ -54,12 +54,12 @@ ENTRYPOINT [ "java", "-jar", "jar-file-name.jar" ]
 ```
 ...in your Dockerfile, to...
 ```
-ENTRYPOINT [ "orb", "run", "java", "-jar", "jar-file-name.jar" ]
+ENTRYPOINT [ "orb", "java", "-jar", "jar-file-name.jar" ]
 ```
 
 This assumes `green-orb.yaml` is in the current directory. Use the
-`-c` flag to point it elsewhere. Prefer `orb run` to avoid flag
-parsing conflicts; `orb -- your-command ...` also works.
+`-c` flag to point it elsewhere. You can pass flags to your command
+without special separators; orb stops parsing at the first non-flag.
 
 The config file tells `orb` what to watch for, and what to do.  For
 instance, if it contains the following, you'll get an email every time
@@ -282,7 +282,7 @@ Green Orb can expose Prometheus metrics for monitoring throughput and behavior.
 Example:
 
 ```
-orb --metrics-enable --metrics-addr 127.0.0.1:9090 run myapp ...
+orb --metrics-enable --metrics-addr 127.0.0.1:9090 myapp ...
 ```
 
 Prometheus scrape example:

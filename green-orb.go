@@ -391,22 +391,61 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			{
-				Name:            "run",
-				Usage:           "Run an observed command; stops flag parsing at the first non-flag",
-				SkipFlagParsing: true,
-				Action: func(ctx context.Context, c *cli.Command) error {
-					if c.NArg() == 0 {
-						cli.ShowCommandHelp(c, "run")
-						return nil
-					}
-					return runObserved(ctx, configFilePath, numWorkers, metricsEnable, metricsAddr, c.Args().Slice())
-				},
-			},
-		},
-	}
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		log.Fatal(err)
-	}
+                Name:            "run",
+                Usage:           "Run an observed command; stops flag parsing at the first non-flag",
+                SkipFlagParsing: true,
+                Action: func(ctx context.Context, c *cli.Command) error {
+                    if c.NArg() == 0 {
+                        cli.ShowCommandHelp(ctx, c, "run")
+                        return nil
+                    }
+                    return runObserved(ctx, configFilePath, numWorkers, metricsEnable, metricsAddr, c.Args().Slice())
+                },
+            },
+        },
+    }
+    // Insert a "--" before the first non-flag arg so flags after the command (e.g., bash -lc) aren't parsed by orb
+    args := os.Args
+    if len(args) > 1 {
+        valueFlags := map[string]bool{"config": true, "workers": true, "metrics-addr": true}
+        i := 1
+        for i < len(args) {
+            a := args[i]
+            if a == "--" {
+                break
+            }
+            if !strings.HasPrefix(a, "-") {
+                // insert -- at position i
+                tmp := make([]string, 0, len(args)+1)
+                tmp = append(tmp, args[:i]...)
+                tmp = append(tmp, "--")
+                tmp = append(tmp, args[i:]...)
+                args = tmp
+                break
+            }
+            if strings.HasPrefix(a, "--") {
+                name := a[2:]
+                if eq := strings.IndexByte(name, '='); eq >= 0 {
+                    name = name[:eq]
+                }
+                if valueFlags[name] && !strings.Contains(a, "=") {
+                    i += 2
+                } else {
+                    i += 1
+                }
+            } else {
+                // short flags like -c or -w may take a value; conservatively skip next for these
+                if a == "-c" || a == "-w" {
+                    i += 2
+                } else {
+                    i += 1
+                }
+            }
+        }
+    }
+    if err := cmd.Run(context.Background(), args); err != nil {
+        log.Fatal(err)
+    }
 }
 
 // runObserved contains the core execution logic for running and observing a subprocess.

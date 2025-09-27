@@ -77,11 +77,11 @@
           <li>Create a config file named <code>green-orb.yaml</code> in your working directory.</li>
           <li>Run your app through <code>orb</code>:</li>
         </ol>
-<pre><code>$ orb run &lt;your command&gt;
+<pre><code>$ orb &lt;your command&gt;
 # Example
-$ orb run java -jar mywebapp.jar</code></pre>
+$ orb java -jar mywebapp.jar</code></pre>
         <p>Using Docker? Set your <code>ENTRYPOINT</code> to run via <code>orb</code>:</p>
-<pre><code>ENTRYPOINT ["orb", "run", "java", "-jar", "app.jar"]</code></pre>
+<pre><code>ENTRYPOINT ["orb", "java", "-jar", "app.jar"]</code></pre>
       </section>
 
       <section class="example">
