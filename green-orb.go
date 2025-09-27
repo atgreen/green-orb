@@ -34,71 +34,127 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"sync"
-
-	"github.com/urfave/cli/v3"
 )
 
 var version = "dev"
 
 func main() {
-	var configFilePath string
-	var numWorkers int64
-	var metricsAddr string
+	var configFilePath = "green-orb.yaml"
+	var numWorkers int64 = 5
+	var metricsAddr = "127.0.0.1:9090"
 
-	cmd := &cli.Command{
-		Name:            "orb",
-		HideHelpCommand: true,
-		Version:         version,
-		Usage:           "Your observe-and-report buddy",
-		Copyright:       "Copyright (C) 2023-2025  Anthony Green <green@moxielogic.com>.\nDistributed under the terms of the MIT license.\nSee https://github.com/atgreen/green-orb for details.",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:        "config",
-				Value:       "green-orb.yaml",
-				Aliases:     []string{"c"},
-				Usage:       "path to the green-orb configuration file",
-				Destination: &configFilePath,
-			},
-			&cli.IntFlag{
-				Name:    "workers",
-				Value:   5,
-				Aliases: []string{"w"},
-				Usage:   "number of reporting workers",
-				Action: func(ctx context.Context, cmd *cli.Command, v int64) error {
-					if (v > 100) || (v < 1) {
-						return fmt.Errorf("Flag workers value %v out of range [1-100]", v)
-					}
-					return nil
-				},
-				Destination: &numWorkers,
-			},
-			&cli.BoolFlag{
-				Name:        "metrics-enable",
-				Value:       false,
-				Usage:       "enable Prometheus metrics endpoint",
-				Destination: &metricsEnable,
-			},
-			&cli.StringFlag{
-				Name:        "metrics-addr",
-				Value:       "127.0.0.1:9090",
-				Usage:       "Prometheus metrics listen address",
-				Destination: &metricsAddr,
-			},
-		},
-		Action: func(ctx context.Context, cmd *cli.Command) error {
-			if cmd.NArg() == 0 {
-				// No arguments provided, show help text
-				cli.ShowAppHelp(cmd)
-				return nil
+	// Parse arguments manually to stop at first non-flag
+	args := os.Args[1:] // Skip program name
+	var commandArgs []string
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+
+		// Check for help/version flags
+		if arg == "--help" || arg == "-h" {
+			showHelp()
+			return
+		}
+		if arg == "--version" || arg == "-v" {
+			fmt.Printf("orb version %s\n", version)
+			return
+		}
+
+		// Stop parsing at first non-flag
+		if !strings.HasPrefix(arg, "-") {
+			commandArgs = args[i:]
+			break
+		}
+
+		// Handle flags
+		if arg == "--config" || arg == "-c" {
+			if i+1 >= len(args) {
+				log.Fatal("green-orb error: --config requires a value")
 			}
-			return runObserved(ctx, configFilePath, numWorkers, metricsAddr, cmd.Args().Slice())
-		},
+			configFilePath = args[i+1]
+			i++ // Skip the value
+		} else if arg == "--workers" || arg == "-w" {
+			if i+1 >= len(args) {
+				log.Fatal("green-orb error: --workers requires a value")
+			}
+			var err error
+			if numWorkers, err = parseWorkers(args[i+1]); err != nil {
+				log.Fatal("green-orb error: ", err)
+			}
+			i++ // Skip the value
+		} else if arg == "--metrics-enable" {
+			metricsEnable = true
+		} else if arg == "--metrics-addr" {
+			if i+1 >= len(args) {
+				log.Fatal("green-orb error: --metrics-addr requires a value")
+			}
+			metricsAddr = args[i+1]
+			i++ // Skip the value
+		} else if strings.HasPrefix(arg, "--config=") {
+			configFilePath = arg[9:] // Remove "--config="
+		} else if strings.HasPrefix(arg, "--workers=") {
+			var err error
+			if numWorkers, err = parseWorkers(arg[10:]); err != nil {
+				log.Fatal("green-orb error: ", err)
+			}
+		} else if strings.HasPrefix(arg, "--metrics-addr=") {
+			metricsAddr = arg[15:] // Remove "--metrics-addr="
+		} else {
+			log.Fatalf("green-orb error: unknown flag: %s", arg)
+		}
 	}
 
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
+	if len(commandArgs) == 0 {
+		showHelp()
+		return
+	}
+
+	if err := runObserved(context.Background(), configFilePath, numWorkers, metricsAddr, commandArgs); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func parseWorkers(value string) (int64, error) {
+	var w int64
+	if _, err := fmt.Sscanf(value, "%d", &w); err != nil {
+		return 0, fmt.Errorf("invalid workers value: %s", value)
+	}
+	if w < 1 || w > 100 {
+		return 0, fmt.Errorf("workers value %d out of range [1-100]", w)
+	}
+	return w, nil
+}
+
+func showHelp() {
+	fmt.Printf(`NAME:
+   orb - Your observe-and-report buddy
+
+USAGE:
+   orb [global options] command [command arguments...]
+
+VERSION:
+   %s
+
+GLOBAL OPTIONS:
+   --config value, -c value   path to the green-orb configuration file (default: "green-orb.yaml")
+   --workers value, -w value  number of reporting workers (default: 5)
+   --metrics-enable           enable Prometheus metrics endpoint (default: false)
+   --metrics-addr value       Prometheus metrics listen address (default: "127.0.0.1:9090")
+   --help, -h                 show help
+   --version, -v              print the version
+
+EXAMPLES:
+   orb echo "Hello World"                    # Observe echo command
+   orb -c myconfig.yaml ls -la               # Use custom config with ls -la
+   orb --metrics-enable java -jar app.jar   # Enable metrics while observing Java app
+
+COPYRIGHT:
+   Copyright (C) 2023-2025  Anthony Green <green@moxielogic.com>.
+   Distributed under the terms of the MIT license.
+   See https://github.com/atgreen/green-orb for details.
+`, version)
 }
 
 // runObserved contains the core execution logic for running and observing a subprocess.
