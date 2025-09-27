@@ -346,6 +346,7 @@ func main() {
 		HideHelpCommand: true,
 		Version:         version,
 		Usage:           "Your observe-and-report buddy",
+		DefaultCommand:  "run",
 		Copyright:       "Copyright (C) 2023-2025  Anthony Green <green@moxielogic.com>.\nDistributed under the terms of the MIT license.\nSee https://github.com/atgreen/green-orb for details.",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
