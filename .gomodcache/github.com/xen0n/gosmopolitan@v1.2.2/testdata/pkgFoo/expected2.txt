@@ -1,0 +1,1 @@
+ROOT/foo.go:31:15: string literal contains rune in Han script

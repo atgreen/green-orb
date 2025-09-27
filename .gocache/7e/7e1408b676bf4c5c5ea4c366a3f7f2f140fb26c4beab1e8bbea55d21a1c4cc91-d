@@ -1,0 +1,6 @@
+./convert.go
+./doc.go
+./lexer.go
+./match.go
+./parser.go
+./pattern.go

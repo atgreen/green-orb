@@ -1,0 +1,19 @@
+name: checks
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    uses: go-simpler/.github/.github/workflows/test.yml@main
+    with:
+      runs-on: '[ "ubuntu-latest", "windows-latest", "macos-latest" ]'
+      go-versions: '[ "stable" ]'
+  lint:
+    uses: go-simpler/.github/.github/workflows/lint.yml@main
+  vuln:
+    uses: go-simpler/.github/.github/workflows/vuln.yml@main

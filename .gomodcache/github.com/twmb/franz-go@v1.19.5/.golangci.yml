@@ -1,0 +1,174 @@
+version: "2"
+run:
+  go: "1.23"
+  allow-parallel-runners: true
+linters:
+  default: none
+  enable:
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - copyloopvar
+    - decorder
+    - durationcheck
+    - durationcheck
+    - exhaustive
+    - exptostd
+    - fatcontext
+    - gocheckcompilerdirectives
+    - gochecksumtype
+    - gocritic
+    - goprintffuncname
+    - gosec
+    - gosmopolitan
+    - grouper
+    - iface
+    - importas
+    - makezero
+    - mirror
+    - misspell
+    - nilerr
+    - noctx
+    - nolintlint
+    - revive
+    - rowserrcheck
+    - spancheck
+    - sqlclosecheck
+    - unconvert
+    - unparam
+    - usestdlibvars
+    - usetesting
+    - wastedassign
+    - whitespace
+
+  settings:
+
+    errorlint:
+      errorf: false
+
+    exhaustive:
+      default-signifies-exhaustive: true
+
+    gocritic:
+      disabled-checks:
+        - appendAssign
+        - builtinShadow
+        - commentedOutCode
+        - emptyStringTest
+        - evalOrder
+        - ifElseChain
+        - importShadow
+        - ptrToRefParam
+        - sloppyReassign
+        - tooManyResultsChecker
+        - typeDefFirst
+        - unnamedResult
+        - unnecessaryBlock
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      settings:
+        hugeParam:
+          sizeThreshold: 256
+        rangeValCopy:
+          sizeThreshold: 256
+
+    gosec:
+      excludes:
+        - G104
+        - G404
+        - G115
+
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+
+    revive:
+      confidence: 0.8
+      severity: warning
+      rules:
+        - name: atomic
+        - name: blank-imports
+        - name: bool-literal-in-expr
+        - name: call-to-gc
+        - name: constant-logical-expr
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: defer
+        - name: dot-imports
+        - name: duplicated-imports
+        - name: early-return
+        - name: empty-block
+        - name: empty-lines
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: get-return
+        - name: identical-branches
+        - name: if-return
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: optimize-operands-order
+        - name: range
+        - name: range-val-in-closure
+        - name: receiver-naming
+        - name: string-of-int
+        - name: struct-tag
+        - name: superfluous-else
+        - name: time-equal
+        - name: time-naming
+        - name: var-declaration
+        - name: unconditional-recursion
+        - name: unexported-naming
+        - name: unexported-return
+        - name: unnecessary-stmt
+        - name: unreachable-code
+        - name: unused-parameter
+        - name: unused-receiver
+        - name: useless-break
+        - name: waitgroup-by-value
+
+    staticcheck:
+      checks:
+        - all
+        - -SA1012
+        - -SA1019
+        - -ST1003
+        - -ST1016
+        - -QF1001
+
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+
+issues:
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gofumpt:
+      extra-rules: true
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

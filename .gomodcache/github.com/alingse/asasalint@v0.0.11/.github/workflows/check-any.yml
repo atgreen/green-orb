@@ -1,0 +1,46 @@
+name: Check Any Input Repo Flow
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_url:
+        description: 'Any Github Golang Repo link'
+        default: ''
+        required: true
+
+jobs:
+  checker:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Setup Go environment
+      uses: actions/setup-go@v3.2.0
+      with:
+       go-version: 1.18
+
+    - name: Install
+      run: go install github.com/alingse/asasalint/cmd/asasalint@latest
+
+    - name: Git Clone
+      run: git clone "${{ github.event.inputs.repo_url }}"
+
+    - name: List 
+      run: ls && echo "${{ github.event.inputs.repo_url }}"
+
+    - name: Check And Build
+      id: check_go_mod
+      run: |
+        cd `ls`
+
+        ls go.mod
+
+        go mod tidy
+
+        exit `go build ./... 2>&1|grep -c warning`
+      continue-on-error: true
+
+    - name: Run asasalint
+      if: steps.check_go_mod.outcome == 'success'
+      run: |
+        cd `ls`
+
+        asasalint ./... || (test $? -eq 1) && exit 0

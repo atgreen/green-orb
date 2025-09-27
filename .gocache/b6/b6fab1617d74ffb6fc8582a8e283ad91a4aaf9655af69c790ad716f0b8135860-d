@@ -1,0 +1,5 @@
+./diff.go
+./doc.go
+./parse.go
+./print.go
+./reader_util.go

@@ -1,0 +1,35 @@
+---
+project_name: nlreturn
+
+builds:
+  - binary: nlreturn
+    main: ./cmd/nlreturn/
+    goos:
+      - darwin
+      - windows
+      - linux
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=0
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+dockers:
+  - dockerfile: build/Dockerfile
+    binaries:
+      - nlreturn
+    image_templates:
+      - "ssgreg/nlreturn:latest"
+      - "ssgreg/nlreturn:{{ .Tag }}"

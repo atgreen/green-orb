@@ -1,0 +1,71 @@
+name: "Release a tag"
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      # https://github.com/actions/setup-go#supported-version-syntax
+      # ex:
+      # - 1.18beta1 -> 1.18.0-beta.1
+      # - 1.18rc1 -> 1.18.0-rc.1
+      GO_VERSION: '1.23'
+      CHOCOLATEY_VERSION: 2.2.0
+    steps:
+      # temporary workaround for an error in free disk space action
+      # https://github.com/jlumbroso/free-disk-space/issues/14
+      - name: Update Package List and Remove Dotnet
+        run: |
+          sudo apt-get update
+          sudo apt-get remove -y '^dotnet-.*'
+
+      # https://github.com/marketplace/actions/free-disk-space-ubuntu
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed
+          tool-cache: false
+
+          # all of these default to true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install chocolatey
+        run: |
+          mkdir -p /opt/chocolatey
+          wget -q -O - "https://github.com/chocolatey/choco/releases/download/${CHOCOLATEY_VERSION}/chocolatey.v${CHOCOLATEY_VERSION}.tar.gz" | tar -xz -C "/opt/chocolatey"
+          echo '#!/bin/bash' >> /usr/local/bin/choco
+          echo 'mono /opt/chocolatey/choco.exe $@' >> /usr/local/bin/choco
+          chmod +x /usr/local/bin/choco
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login do docker.io
+        run: docker login -u golangci -p ${{ secrets.GOLANGCI_LINT_DOCKER_TOKEN }}
+
+      - name: Create release
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: release --clean --timeout=90m
+        env:
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GOLANGCI_LINT_TOKEN }}

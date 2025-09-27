@@ -1,0 +1,10 @@
+{
+	"Patterns": {
+		"editions_defaults.binpb": [
+			"editions_defaults.binpb"
+		]
+	},
+	"Files": {
+		"editions_defaults.binpb": "/home/green/git/green-orb/.gomodcache/google.golang.org/protobuf@v1.34.2/internal/editiondefaults/editions_defaults.binpb"
+	}
+}

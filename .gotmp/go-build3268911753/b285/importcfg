@@ -1,0 +1,11 @@
+# import config
+packagefile bytes=/home/green/git/green-orb/.gocache/43/4332ac7d01757459cd9dea85d8533d90abc486b477a3e32e051cc6efe667685b-d
+packagefile errors=/home/green/git/green-orb/.gocache/f4/f41f0bd5ddd3970a457c7f7d070087cac3aaad5c4987393a2776f36f92c18128-d
+packagefile fmt=/home/green/git/green-orb/.gocache/ec/ecb98db685f9c7d7d2b166923fdde9240c881d95f21bbabdc382433bccdc1445-d
+packagefile github.com/pierrec/lz4/v4/internal/lz4block=/home/green/git/green-orb/.gotmp/go-build3268911753/b286/_pkg_.a
+packagefile github.com/pierrec/lz4/v4/internal/lz4errors=/home/green/git/green-orb/.gotmp/go-build3268911753/b287/_pkg_.a
+packagefile github.com/pierrec/lz4/v4/internal/lz4stream=/home/green/git/green-orb/.gotmp/go-build3268911753/b288/_pkg_.a
+packagefile io=/home/green/git/green-orb/.gocache/a6/a6f04a09d25b4d4b2bf59e809a5e8ed84a718543da536f606059d3b7e094a305-d
+packagefile reflect=/home/green/git/green-orb/.gocache/ac/ac3ddfeefcfbc7a6eff37144242a9d59313db8462a58437fa501bb6afb7ac6f8-d
+packagefile runtime=/home/green/git/green-orb/.gocache/b4/b4a74adbdbc558afe7b9840362fc59892500a07ecee5e6de3083f2ef16dff607-d
+packagefile strconv=/home/green/git/green-orb/.gocache/77/77060844c85caac6071d567bd8232edc9d3e5e251b953c44f5fe4e3111cbc8d5-d

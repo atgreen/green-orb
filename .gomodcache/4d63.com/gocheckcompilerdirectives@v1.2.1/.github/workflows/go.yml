@@ -1,0 +1,47 @@
+name: Go
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+  release:
+    types:
+    - published
+
+jobs:
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@0ad9a0988b3973e851ab0a07adf248ec2e100376
+      with:
+        version: v1.50.1
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: go test -v ./...
+
+  build-and-upload:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - if: ${{ github.event_name != 'release' }}
+      uses: goreleaser/goreleaser-action@8f67e590f2d095516493f017008adc464e63adb1
+      with:
+        args: release --rm-dist --snapshot
+    - if: ${{ github.event_name == 'release' }}
+      uses: goreleaser/goreleaser-action@8f67e590f2d095516493f017008adc464e63adb1
+      with:
+        args: release --rm-dist
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/upload-artifact@v3
+      with:
+        name: binaries
+        path: dist/*

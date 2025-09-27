@@ -1,0 +1,5 @@
+package global
+
+func dontImportPackage() {
+	header.Get("Test-Header") // want `non-canonical header "Test-HEader", instead use: "Test-Header"`
+}

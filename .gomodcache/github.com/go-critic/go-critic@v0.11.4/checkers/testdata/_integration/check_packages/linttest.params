@@ -1,0 +1,2 @@
+check -enableAll ./src/foo ./src/bar | linttest.golden
+check -enableAll ./src/bar ./src/foo | linttest.golden

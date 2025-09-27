@@ -1,0 +1,35 @@
+name: ci
+on: [push, pull_request]
+jobs:
+
+  build:
+    name: ci
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.21
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.21
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Set go envs
+      run: |
+        echo "GOPATH=$(dirname $GITHUB_WORKSPACE)" >> $GITHUB_ENV
+        echo "$(dirname $GITHUB_WORKSPACE)/bin" >> $GITHUB_PATH
+
+    - name: Build
+      run: go build
+ 
+    - name: Test
+      run: go test ./... -race -v
+
+    - name: Install
+      run: go install ./...
+    
+    - name: Self-check
+      run: go-header $(git ls-files | grep -E '.*\.go$')

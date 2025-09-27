@@ -1,0 +1,3 @@
+./format.go
+./rewrite.go
+./simplify.go

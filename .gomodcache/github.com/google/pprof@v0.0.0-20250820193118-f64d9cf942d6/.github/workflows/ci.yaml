@@ -1,0 +1,254 @@
+name: ci
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:
+    - cron: '0 2 * * *' # Run every day, at 2AM UTC.
+env:
+  GOPATH: ${{ github.workspace }}
+  WORKING_DIR: ./src/github.com/google/pprof/
+jobs:
+  test-mac:
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ['1.24', '1.25', 'tip']
+        # Supported macOS versions can be found in
+        # https://github.com/actions/virtual-environments#available-environments.
+        os: ['macos-13', 'macos-14']
+        # Supported Xcode versions can be found in:
+        # - https://github.com/actions/virtual-environments/blob/main/images/macos/macos-13-Readme.md#xcode
+        # - https://github.com/actions/virtual-environments/blob/main/images/macos/macos-14-Readme.md#xcode
+        xcode-version: ['16.2', '16.1', '15.4', '15.3', '15.2', '15.1', '15.0.1', '14.3.1', '14.2', '14.1']
+        exclude:
+          - os: 'macos-13'
+            xcode-version: '16.2'
+          - os: 'macos-13'
+            xcode-version: '16.1'
+          - os: 'macos-13'
+            xcode-version: '15.4'
+          - os: 'macos-13'
+            xcode-version: '15.3'
+          - os: 'macos-14'
+            xcode-version: '14.3.1'
+          - os: 'macos-14'
+            xcode-version: '14.2'
+          - os: 'macos-14'
+            xcode-version: '14.1'
+
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          path: ${{ env.WORKING_DIR }}
+
+      - name: Update Go version using setup-go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        if: matrix.go != 'tip'
+        with:
+          # Include cache directives to allow proper caching. Without them, we
+          # get setup-go "Restore cache failed" warnings.
+          go-version: ${{ matrix.go }}
+          cache: true
+          cache-dependency-path: '**/go.sum'
+
+      - name: Install Go bootstrap compiler
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        if: matrix.go == 'tip'
+        with:
+          # Bootstrapping go tip requires 1.24
+          # Include cache directives to allow proper caching. Without them, we
+          # get setup-go "Restore cache failed" warnings.
+          go-version: 1.24
+          cache: true
+          cache-dependency-path: '**/go.sum'
+
+      - name: Update Go version manually
+        if: matrix.go == 'tip'
+        working-directory: ${{ github.workspace }}
+        run: |
+          git clone https://go.googlesource.com/go $HOME/gotip
+          cd $HOME/gotip/src
+          ./make.bash
+          echo "GOROOT=$HOME/gotip" >> $GITHUB_ENV
+          echo "RUN_STATICCHECK=false" >> $GITHUB_ENV
+          echo "RUN_GOLANGCI_LINTER=false" >> $GITHUB_ENV
+          echo "$HOME/gotip/bin:$PATH" >> $GITHUB_PATH
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1.6.0
+        with:
+          xcode-version: ${{ matrix.xcode-version }}
+
+      - name: Fetch dependencies
+        run: |
+          brew install graphviz
+          # Do not let tools interfere with the main module's go.mod.
+          cd && go mod init tools
+          go install honnef.co/go/tools/cmd/staticcheck@2025.1.1
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.7
+          # Add PATH for installed tools.
+          echo "$GOPATH/bin:$PATH" >> $GITHUB_PATH
+
+      - name: Run the script
+        run: |
+          go version
+          ./test.sh
+
+      - name: Code coverage
+        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
+        with:
+          file: ${{ env.WORKING_DIR }}/coverage.txt
+
+  test-linux:
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ['1.24', '1.25', 'tip']
+        os: ['ubuntu-24.04', 'ubuntu-22.04']
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          path: ${{ env.WORKING_DIR }}
+
+      - name: Update Go version using setup-go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        if: matrix.go != 'tip'
+        with:
+          # Include cache directives to allow proper caching. Without them, we
+          # get setup-go "Restore cache failed" warnings.
+          go-version: ${{ matrix.go }}
+          cache: true
+          cache-dependency-path: '**/go.sum'
+
+      - name: Install Go bootstrap compiler
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        if: matrix.go == 'tip'
+        with:
+          # Bootstrapping go tip requires 1.24
+          # Include cache directives to allow proper caching. Without them, we
+          # get setup-go "Restore cache failed" warnings.
+          go-version: 1.24
+          cache: true
+          cache-dependency-path: '**/go.sum'
+
+      - name: Update Go version manually
+        if: matrix.go == 'tip'
+        working-directory: ${{ github.workspace }}
+        run: |
+          git clone https://go.googlesource.com/go $HOME/gotip
+          cd $HOME/gotip/src
+          ./make.bash
+          echo "GOROOT=$HOME/gotip" >> $GITHUB_ENV
+          echo "RUN_STATICCHECK=false" >> $GITHUB_ENV
+          echo "RUN_GOLANGCI_LINTER=false" >> $GITHUB_ENV
+          echo "$HOME/gotip/bin" >> $GITHUB_PATH
+
+      - name: Check chrome for browser tests
+        run: |
+          google-chrome --version
+          which google-chrome
+
+      - name: Add LLVM 14.0 repository to ensure llvm-symbolizer 14.0.0+ on Ubuntu 20.04
+        if: matrix.os == 'ubuntu-20.04'
+        run: |
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main"
+          sudo apt-get update
+
+      - name: Install llvm-symbolizer
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-20.04" ]; then
+            sudo apt-get install -y llvm-14 clang-14
+            sudo update-alternatives --install /usr/bin/llvm-symbolizer llvm-symbolizer /usr/bin/llvm-symbolizer-14 100
+          else
+            sudo apt-get update
+            sudo apt-get install -y llvm clang
+          fi
+
+      - name: Fetch dependencies
+        run: |
+          sudo apt-get install graphviz
+          # Do not let tools interfere with the main module's go.mod.
+          cd && go mod init tools
+          go install honnef.co/go/tools/cmd/staticcheck@2025.1.1
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.7
+          # Add PATH for installed tools.
+          echo "$GOPATH/bin:$PATH" >> $GITHUB_PATH
+
+      - name: Check llvm-symbolizer installation
+        run: |
+          llvm-symbolizer --version
+
+      - name: Run the script
+        run: |
+          go version
+          ./test.sh
+
+      - name: Code coverage
+        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
+        with:
+          file: ${{ env.WORKING_DIR }}/coverage.txt
+
+  test-windows:
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ['1.24', '1.25']
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          path: ${{ env.WORKING_DIR }}
+
+      - name: Update Go version using setup-go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          # Include cache directives to allow proper caching. Without them, we
+          # get setup-go "Restore cache failed" warnings.
+          go-version: ${{ matrix.go }}
+          cache: true
+          cache-dependency-path: '**/go.sum'
+
+      - name: Fetch Windows dependency
+        uses: crazy-max/ghaction-chocolatey@6828f16489ec8d2968b55066766cb41f0d278f2a # v3.3.0
+        with:
+          args: install graphviz llvm
+
+      - name: Run the test
+        run: |
+          go version
+          # This is a workaround to make graphviz installed through choco work.
+          # It generates a config file to tell dot what layout engine and
+          # format types are available. See
+          # https://github.com/google/pprof/issues/585 for more details.
+          dot -c
+          go env
+          go build github.com/google/pprof
+          go test -v ./...
+        working-directory: ${{ env.WORKING_DIR }}
+
+  check:
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+    - test-mac
+    - test-linux
+    - test-windows
+    steps:
+    - name: Decide whether the needed jobs succeeded or failed
+      uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
+      with:
+        jobs: ${{ toJSON(needs) }}

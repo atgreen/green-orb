@@ -1,0 +1,5 @@
+./arg.go
+./deprecated.go
+./doc.go
+./signatures.go
+./targets.go

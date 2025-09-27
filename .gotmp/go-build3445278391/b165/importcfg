@@ -1,0 +1,9 @@
+# import config
+packagefile fmt=/home/green/git/green-orb/.gocache/ec/ecb98db685f9c7d7d2b166923fdde9240c881d95f21bbabdc382433bccdc1445-d
+packagefile github.com/mattn/go-colorable=/home/green/git/green-orb/.gotmp/go-build3445278391/b166/_pkg_.a
+packagefile github.com/mattn/go-isatty=/home/green/git/green-orb/.gotmp/go-build3445278391/b167/_pkg_.a
+packagefile io=/home/green/git/green-orb/.gocache/a6/a6f04a09d25b4d4b2bf59e809a5e8ed84a718543da536f606059d3b7e094a305-d
+packagefile os=/home/green/git/green-orb/.gocache/ad/ad7c3b683428d868ad15210ae74ff0b6b02e96daf47f8079e73be6b5890d086f-d
+packagefile strconv=/home/green/git/green-orb/.gocache/77/77060844c85caac6071d567bd8232edc9d3e5e251b953c44f5fe4e3111cbc8d5-d
+packagefile strings=/home/green/git/green-orb/.gocache/1c/1cd0ccc0c9a200f25f975c2d1d9730a3e5d3fabd80eb9363b4136c66f8756a9e-d
+packagefile sync=/home/green/git/green-orb/.gocache/c5/c560cf9f404fceb1a13a7a9846049cebe3f7a1d04efb7121f7b3e1f8d5d990a8-d

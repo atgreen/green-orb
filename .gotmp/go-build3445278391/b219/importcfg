@@ -1,0 +1,20 @@
+# import config
+packagefile context=/home/green/git/green-orb/.gocache/e9/e9d73a00ca11040702a07322d1c1098ff9308ee65b9a1d88c017669e7b2d05e2-d
+packagefile crypto/rand=/home/green/git/green-orb/.gocache/77/772c697359cc134985e2b3d566b7426745a078b640fe05bf891f666fb72ba6f6-d
+packagefile crypto/tls=/home/green/git/green-orb/.gocache/90/90cad425df109e047e64dfcf14fc0e05c695b2a9d16e6e981d29d1606408eb4f-d
+packagefile encoding/hex=/home/green/git/green-orb/.gocache/18/1890217fd9f0bc387b0b62ef379754f44048d55bb8e2cb824680d8b7a6843b03-d
+packagefile errors=/home/green/git/green-orb/.gocache/f4/f41f0bd5ddd3970a457c7f7d070087cac3aaad5c4987393a2776f36f92c18128-d
+packagefile fmt=/home/green/git/green-orb/.gocache/ec/ecb98db685f9c7d7d2b166923fdde9240c881d95f21bbabdc382433bccdc1445-d
+packagefile github.com/nicholas-fedor/shoutrrr/internal/failures=/home/green/git/green-orb/.gotmp/go-build3445278391/b176/_pkg_.a
+packagefile github.com/nicholas-fedor/shoutrrr/pkg/format=/home/green/git/green-orb/.gotmp/go-build3445278391/b164/_pkg_.a
+packagefile github.com/nicholas-fedor/shoutrrr/pkg/services/standard=/home/green/git/green-orb/.gotmp/go-build3445278391/b175/_pkg_.a
+packagefile github.com/nicholas-fedor/shoutrrr/pkg/types=/home/green/git/green-orb/.gotmp/go-build3445278391/b169/_pkg_.a
+packagefile github.com/nicholas-fedor/shoutrrr/pkg/util=/home/green/git/green-orb/.gotmp/go-build3445278391/b174/_pkg_.a
+packagefile io=/home/green/git/green-orb/.gocache/a6/a6f04a09d25b4d4b2bf59e809a5e8ed84a718543da536f606059d3b7e094a305-d
+packagefile net=/home/green/git/green-orb/.gocache/dd/ddf7424fae768f3a9119b88a8624f0980ca1fed7a35dc5aaeb13d8014200ac03-d
+packagefile net/smtp=/home/green/git/green-orb/.gocache/23/23c08ae2f70883885d4e0a88bf6184da159a8f8b8e9f4c97e171e099f18aa773-d
+packagefile net/url=/home/green/git/green-orb/.gocache/c4/c4d6de2a7ab274f1e5b87e7db22819af043349de9e0dc92df237089bee2690f2-d
+packagefile os=/home/green/git/green-orb/.gocache/ad/ad7c3b683428d868ad15210ae74ff0b6b02e96daf47f8079e73be6b5890d086f-d
+packagefile strconv=/home/green/git/green-orb/.gocache/77/77060844c85caac6071d567bd8232edc9d3e5e251b953c44f5fe4e3111cbc8d5-d
+packagefile strings=/home/green/git/green-orb/.gocache/1c/1cd0ccc0c9a200f25f975c2d1d9730a3e5d3fabd80eb9363b4136c66f8756a9e-d
+packagefile time=/home/green/git/green-orb/.gocache/fe/fe80f52c8d01ded020a43e5d9edb0060256eba7f05df1d040c0890b2d96c3bc4-d

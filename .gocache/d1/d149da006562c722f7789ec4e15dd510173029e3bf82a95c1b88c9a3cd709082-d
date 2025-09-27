@@ -1,0 +1,7 @@
+./call.go
+./diagnostic.go
+./file.go
+./pkg.go
+./ssa.go
+./ssainspect.go
+./types.go

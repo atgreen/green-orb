@@ -1,0 +1,9 @@
+# import config
+packagefile fmt=/home/green/git/green-orb/.gocache/ec/ecb98db685f9c7d7d2b166923fdde9240c881d95f21bbabdc382433bccdc1445-d
+packagefile github.com/containrrr/shoutrrr/internal/meta=/home/green/git/green-orb/.gotmp/go-build3268911753/b160/_pkg_.a
+packagefile github.com/containrrr/shoutrrr/pkg/types=/home/green/git/green-orb/.gotmp/go-build3268911753/b164/_pkg_.a
+packagefile io/ioutil=/home/green/git/green-orb/.gocache/47/4732f48ce0a22c1b1dc68bac1df3ca35ec49e0063a558fc8bc7bc9ac7341726c-d
+packagefile log=/home/green/git/green-orb/.gocache/86/86feea9e8c22315403f4a87a7d1010aa1d97335d4676da1c89a0e6e441707c5f-d
+packagefile net/url=/home/green/git/green-orb/.gocache/c4/c4d6de2a7ab274f1e5b87e7db22819af043349de9e0dc92df237089bee2690f2-d
+packagefile reflect=/home/green/git/green-orb/.gocache/ac/ac3ddfeefcfbc7a6eff37144242a9d59313db8462a58437fa501bb6afb7ac6f8-d
+packagefile strings=/home/green/git/green-orb/.gocache/1c/1cd0ccc0c9a200f25f975c2d1d9730a3e5d3fabd80eb9363b4136c66f8756a9e-d

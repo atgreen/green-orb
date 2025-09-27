@@ -1,0 +1,784 @@
+// green-orb.go - an Observe and Report Buddy
+//
+// SPDX-License-Identifier: MIT
+//
+// Copyright (C) 2023-2025 Anthony Green - green@moxielogic.com
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the “Software”), to deal in the Software without
+// restriction, including without limitation the rights to use, copy,
+// modify, merge, publish, distribute, sublicense, and/or sell copies
+// of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+// BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+package main
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"github.com/nicholas-fedor/shoutrrr"
+	"github.com/twmb/franz-go/pkg/kgo"
+	"github.com/twmb/franz-go/pkg/sasl/plain"
+	"github.com/urfave/cli/v3"
+	"golang.org/x/time/rate"
+	"gopkg.in/yaml.v3"
+	"io"
+	"log"
+	"math"
+	"net"
+	"net/http"
+	"os"
+	"os/exec"
+	"os/signal"
+	"regexp"
+	"strconv"
+	"strings"
+	"sync"
+	"syscall"
+	"text/template"
+	"time"
+)
+
+var version = "dev"
+
+func kafkaConnect(channels []Channel) (map[string]*kgo.Client, error) {
+
+	for _, channel := range channels {
+		if channel.Type == "kafka" {
+			seeds := []string{channel.Broker}
+			opts := []kgo.Opt{
+				kgo.RequiredAcks(kgo.AllISRAcks()),
+				kgo.DisableIdempotentWrite(),
+				kgo.ProducerLinger(50 * time.Millisecond),
+				kgo.RecordRetries(math.MaxInt32),
+				kgo.RecordDeliveryTimeout(5 * time.Second),
+				kgo.ProduceRequestTimeout(5 * time.Second),
+				kgo.SeedBrokers(seeds...),
+			}
+
+			// Optional TLS config
+			if channel.TLSEnable {
+				tlsCfg := &tls.Config{InsecureSkipVerify: channel.TLSInsecureSkipVerify} //nolint:gosec // configurable for environments with self-signed certs
+				// Load CA if provided
+				if channel.TLSCAFile != "" {
+					caPem, err := os.ReadFile(channel.TLSCAFile)
+					if err != nil {
+						log.Fatal("green-orb error: failed to read TLS CA file: ", err)
+					}
+					pool := x509.NewCertPool()
+					if !pool.AppendCertsFromPEM(caPem) {
+						log.Fatal("green-orb error: failed to parse TLS CA file")
+					}
+					tlsCfg.RootCAs = pool
+				}
+				// Load client cert if provided
+				if channel.TLSCertFile != "" && channel.TLSKeyFile != "" {
+					certPem, err := os.ReadFile(channel.TLSCertFile)
+					if err != nil {
+						log.Fatal("green-orb error: failed to read TLS cert file: ", err)
+					}
+					keyPem, err := os.ReadFile(channel.TLSKeyFile)
+					if err != nil {
+						log.Fatal("green-orb error: failed to read TLS key file: ", err)
+					}
+					cert, err := tls.X509KeyPair(certPem, keyPem)
+					if err != nil {
+						log.Fatal("green-orb error: failed to load TLS key pair: ", err)
+					}
+					tlsCfg.Certificates = []tls.Certificate{cert}
+				}
+				opts = append(opts, kgo.DialTLSConfig(tlsCfg))
+			}
+
+			// Optional SASL (plain)
+			if channel.SASLMechanism == "plain" || (channel.SASLMechanism == "" && channel.SASLUsername != "") {
+				mech := plain.Auth{User: channel.SASLUsername, Pass: channel.SASLPassword}.AsMechanism()
+				opts = append(opts, kgo.SASL(mech))
+			}
+
+			cl, err := kgo.NewClient(opts...)
+			if err != nil {
+				log.Fatal("green-orb error: failed to create kafka client connection: ", err)
+			}
+			kafkaClients[channel.Name] = cl
+		}
+	}
+	return kafkaClients, nil
+}
+
+func compileSignals(signals []Signal) ([]CompiledSignal, error) {
+	var compiledSignals []CompiledSignal
+	for _, signal := range signals {
+		re, err := regexp.Compile(signal.Regex)
+		if err != nil {
+			log.Fatal("green-orb error: failed to compile regex \"", signal.Regex, "\": ", err)
+		}
+		compiledSignals = append(compiledSignals, CompiledSignal{
+			Regex:   re,
+			Channel: signal.Channel,
+		})
+	}
+	return compiledSignals, nil
+}
+
+type CompiledSignal struct {
+	Regex   *regexp.Regexp
+	Channel string
+}
+
+type Notification struct {
+	PID     int
+	Channel Channel
+	Match   []string
+	Message string
+}
+
+type TemplateData struct {
+	PID       int
+	Logline   string
+	Matches   []string
+	Timestamp string
+	Env       map[string]string
+}
+
+// Check configuration for periodic health checks
+type Check struct {
+	Name     string `yaml:"name"`
+	Type     string `yaml:"type"` // http, tcp, flapping
+	Channel  string `yaml:"channel"`
+	Interval string `yaml:"interval"`
+	Timeout  string `yaml:"timeout"`
+	// HTTP-specific
+	URL          string `yaml:"url"`
+	ExpectStatus int    `yaml:"expect_status"`
+	BodyRegex    string `yaml:"body_regex"`
+	// TCP-specific
+	Host string `yaml:"host"`
+	Port int    `yaml:"port"`
+	// Flapping-specific
+	RestartThreshold int    `yaml:"restart_threshold"`
+	Window           string `yaml:"window"`
+}
+
+func loadYAMLConfig(filename string, config *Config) error {
+	bytes, err := os.ReadFile(filename)
+	if err != nil {
+		log.Fatal("green-orb error: ", err)
+	}
+
+	err = yaml.Unmarshal(bytes, config)
+	if err != nil {
+		log.Fatal("green-orb error: Failed parsing config file: ", err)
+	}
+
+	return nil
+}
+
+func envToMap() (map[string]string, error) {
+	envMap := make(map[string]string)
+	var err error
+
+	for _, v := range os.Environ() {
+		split_v := strings.Split(v, "=")
+		envMap[split_v[0]] = strings.Join(split_v[1:], "=")
+	}
+	return envMap, err
+}
+
+func startWorkers(notificationQueue <-chan Notification, numWorkers int64, wg *sync.WaitGroup) {
+	var messageString string
+
+	for i := 0; i < int(numWorkers); i++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+			for notification := range notificationQueue {
+				env, _ := envToMap()
+				td := TemplateData{PID: notification.PID,
+					Logline:   notification.Message,
+					Env:       env,
+					Matches:   notification.Match,
+					Timestamp: time.Now().Format(time.RFC3339)}
+				start := time.Now()
+				actionType := notification.Channel.Type
+				outcome := "success"
+				switch notification.Channel.Type {
+				case "notify":
+					tmpl, err := template.New("url").Parse(notification.Channel.URL)
+					if err != nil {
+						log.Fatal("green-orb error: can't parse URL template: ", err)
+					}
+					var buffer bytes.Buffer
+					err = tmpl.Execute(&buffer, td)
+					if err != nil {
+						log.Fatal("green-orb error: can't execute URL template: ", err)
+					}
+					urlString := buffer.String()
+					if notification.Channel.Template != "" {
+						tmpl, err := template.New("msg").Parse(notification.Channel.Template)
+						if err != nil {
+							log.Fatal("green-orb error: can't parse template: ", err)
+						}
+						var buffer bytes.Buffer
+						err = tmpl.Execute(&buffer, td)
+						if err != nil {
+							log.Fatal("green-orb error: can't execute URL template: ", err)
+						}
+						messageString = buffer.String()
+					} else {
+						messageString = notification.Message
+					}
+					err = shoutrrr.Send(urlString, messageString)
+					if err != nil {
+						log.Println("green-orb warning: failed sending notification: ", err)
+						outcome = "error"
+					}
+				case "exec":
+					var stdout bytes.Buffer
+					var stderr bytes.Buffer
+
+					cmd := exec.Command("bash", "-c", notification.Channel.Shell)
+					cmd.Env = os.Environ()
+					cmd.Env = append(cmd.Env, fmt.Sprintf("ORB_PID=%d", notification.PID))
+					cmd.Env = append(cmd.Env, fmt.Sprintf("ORB_MATCH_COUNT=%d", len(notification.Match)))
+					for i, m := range notification.Match {
+						// Expose each regex match as ORB_MATCH_0 .. ORB_MATCH_n
+						cmd.Env = append(cmd.Env, fmt.Sprintf("ORB_MATCH_%d=%s", i, m))
+					}
+					cmd.Stdout = &stdout
+					cmd.Stderr = &stderr
+					if err := cmd.Run(); err != nil {
+						log.Println("green-orb warning: exec channel failed: ", err)
+						outcome = "error"
+					}
+				case "kafka":
+					ctx := context.Background()
+					record := &kgo.Record{Topic: notification.Channel.Topic, Value: []byte(notification.Message)}
+					if err := kafkaClients[notification.Channel.Name].ProduceSync(ctx, record).FirstErr(); err != nil {
+						log.Println("green-orb warning: kafka record had a produce error:", err)
+						outcome = "error"
+					}
+				case "restart":
+					restart = true
+					observed_cmd.Process.Signal(syscall.SIGTERM)
+					orbRestartsTotal.Inc()
+					restartTimesMu.Lock()
+					restartTimes = append(restartTimes, time.Now())
+					restartTimesMu.Unlock()
+				case "kill":
+					restart = false
+					observed_cmd.Process.Signal(syscall.SIGTERM)
+				}
+				// Metrics for action
+				orbActionsTotal.WithLabelValues(notification.Channel.Name, actionType, outcome).Inc()
+				orbActionLatencySeconds.WithLabelValues(notification.Channel.Name, actionType).Observe(time.Since(start).Seconds())
+			}
+		}(i)
+	}
+}
+
+func main() {
+
+	var configFilePath string
+	var numWorkers int64
+	var metricsEnable bool
+	var metricsAddr string
+
+	cmd := &cli.Command{
+		Name:            "orb",
+		HideHelpCommand: true,
+		Version:         version,
+		Usage:           "Your observe-and-report buddy",
+		DefaultCommand:  "run",
+		Copyright:       "Copyright (C) 2023-2025  Anthony Green <green@moxielogic.com>.\nDistributed under the terms of the MIT license.\nSee https://github.com/atgreen/green-orb for details.",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "config",
+				Value:       "green-orb.yaml",
+				Aliases:     []string{"c"},
+				Usage:       "path to the green-orb configuration file",
+				Destination: &configFilePath,
+			},
+			&cli.IntFlag{
+				Name:    "workers",
+				Value:   5,
+				Aliases: []string{"w"},
+				Usage:   "number of reporting workers",
+				Action: func(ctx context.Context, cmd *cli.Command, v int64) error {
+					if (v > 100) || (v < 1) {
+						return fmt.Errorf("Flag workers value %v out of range [1-100]", v)
+					}
+					return nil
+				},
+				Destination: &numWorkers,
+			},
+			&cli.BoolFlag{
+				Name:        "metrics-enable",
+				Value:       false,
+				Usage:       "enable Prometheus metrics endpoint",
+				Destination: &metricsEnable,
+			},
+			&cli.StringFlag{
+				Name:        "metrics-addr",
+				Value:       "127.0.0.1:9090",
+				Usage:       "Prometheus metrics listen address",
+				Destination: &metricsAddr,
+			},
+		},
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			if cmd.NArg() == 0 {
+				// No arguments provided, show help text
+				cli.ShowAppHelp(cmd)
+				return nil
+			}
+			return runObserved(ctx, configFilePath, numWorkers, metricsEnable, metricsAddr, cmd.Args().Slice())
+		},
+		Commands: []*cli.Command{
+			{
+                Name:            "run",
+                Usage:           "Run an observed command; stops flag parsing at the first non-flag",
+                SkipFlagParsing: true,
+                Action: func(ctx context.Context, c *cli.Command) error {
+                    if c.NArg() == 0 {
+                        cli.ShowCommandHelp(ctx, c, "run")
+                        return nil
+                    }
+                    return runObserved(ctx, configFilePath, numWorkers, metricsEnable, metricsAddr, c.Args().Slice())
+                },
+            },
+        },
+    }
+    // Ensure subcommand token precedes the observed command, so flags afterwards (e.g., -lc) aren't parsed by orb.
+    // If user didn't specify a subcommand, inject "run" before the first non-flag token.
+    args := os.Args
+    if len(args) > 1 {
+        valueFlags := map[string]bool{"config": true, "workers": true, "metrics-addr": true}
+        i := 1
+        for i < len(args) {
+            a := args[i]
+            if a == "--" {
+                // explicit separator: next token starts observed command
+                i++
+                break
+            }
+            if !strings.HasPrefix(a, "-") {
+                break
+            }
+            if strings.HasPrefix(a, "--") {
+                name := a[2:]
+                if eq := strings.IndexByte(name, '='); eq >= 0 {
+                    name = name[:eq]
+                }
+                if valueFlags[name] && !strings.Contains(a, "=") {
+                    i += 2
+                } else {
+                    i += 1
+                }
+            } else {
+                if a == "-c" || a == "-w" {
+                    i += 2
+                } else {
+                    i += 1
+                }
+            }
+        }
+        // If next token is not an explicit subcommand, inject "run"
+        if i < len(args) && args[i] != "run" {
+            tmp := make([]string, 0, len(args)+1)
+            tmp = append(tmp, args[:i]...)
+            tmp = append(tmp, "run")
+            tmp = append(tmp, args[i:]...)
+            args = tmp
+        }
+    }
+    if err := cmd.Run(context.Background(), args); err != nil {
+        log.Fatal(err)
+    }
+}
+
+// runObserved contains the core execution logic for running and observing a subprocess.
+func runObserved(ctx context.Context, configFilePath string, numWorkers int64, metricsEnable bool, metricsAddr string, subprocessArgs []string) error {
+    // Drop any leading "--" separators that may be present after CLI parsing.
+    for len(subprocessArgs) > 0 && subprocessArgs[0] == "--" {
+        subprocessArgs = subprocessArgs[1:]
+    }
+	config := Config{}
+	if err := loadYAMLConfig(configFilePath, &config); err != nil {
+		log.Fatal("green-orb error: Failed to load config: ", err)
+	}
+
+	kafkaConnect(config.Channel)
+	compiledSignals, _ := compileSignals(config.Signal)
+
+	if len(subprocessArgs) == 0 {
+		log.Fatal("green-orb error: No command provided to run")
+	}
+
+	notificationQueue := make(chan Notification, 100)
+	// Start metrics endpoint and queue depth reporter if enabled
+	if metricsEnable {
+		StartMetricsServer(metricsAddr)
+		stopGauge := make(chan struct{})
+		go StartQueueDepthGauge(notificationQueue, stopGauge)
+		defer close(stopGauge)
+	}
+
+	// Use a WaitGroup to wait for the reading goroutines to finish
+	var wg sync.WaitGroup
+	var nwg sync.WaitGroup
+
+	startWorkers(notificationQueue, numWorkers, &nwg)
+
+	channelMap := make(map[string]Channel)
+	for _, ch := range config.Channel {
+		channelMap[ch.Name] = ch
+	}
+
+	// Initialize channel rate limiters
+	for _, ch := range config.Channel {
+		if ch.RatePerSec > 0 {
+			burst := ch.Burst
+			if burst <= 0 {
+				burst = 1
+			}
+			channelLimiters[ch.Name] = rate.NewLimiter(rate.Limit(ch.RatePerSec), burst)
+		}
+	}
+
+	// Start checks scheduler if any checks are defined
+	stopChecks := startChecksScheduler(config.Check, func() int {
+		if observed_cmd != nil && observed_cmd.Process != nil {
+			return observed_cmd.Process.Pid
+		}
+		return 0
+	}, channelMap, notificationQueue)
+	defer stopChecks()
+
+	// Validate that all referenced channels exist
+	for _, cs := range compiledSignals {
+		if _, ok := channelMap[cs.Channel]; !ok {
+			log.Fatalf("green-orb error: signal references unknown channel %q", cs.Channel)
+		}
+	}
+
+	var err error
+	for restart {
+		restart = false
+
+		// Prepare to run the subprocess
+		observed_cmd = exec.Command(subprocessArgs[0], subprocessArgs[1:]...)
+		stdout, _ := observed_cmd.StdoutPipe()
+		stderr, _ := observed_cmd.StderrPipe()
+
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan)
+
+		if err := observed_cmd.Start(); err != nil {
+			log.Fatal("green-orb error: Failed to start subprocess: ", err)
+		}
+
+		// Goroutine for passing signals
+		go func() {
+			for sig := range sigChan {
+				process_signal(observed_cmd, sig)
+			}
+		}()
+
+		pid := observed_cmd.Process.Pid
+		if metricsEnable {
+			orbObservedPID.Set(float64(pid))
+		}
+
+		// Increment WaitGroup and start reading stdout/stderr
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			monitorOutput(pid, bufio.NewScanner(stdout), compiledSignals, notificationQueue, channelMap, false)
+		}()
+		go func() {
+			defer wg.Done()
+			monitorOutput(pid, bufio.NewScanner(stderr), compiledSignals, notificationQueue, channelMap, true)
+		}()
+
+		// Wait for all reading to be complete
+		wg.Wait()
+
+		// Wait for the command to finish
+		err = observed_cmd.Wait()
+
+		// After cmd.Wait(), stop listening for signals
+		signal.Stop(sigChan)
+		close(sigChan)
+	}
+
+	close(notificationQueue)
+	nwg.Wait()
+
+	// Close Kafka clients on shutdown
+	for name, cl := range kafkaClients {
+		if cl != nil {
+			cl.Close()
+			_ = name
+		}
+	}
+	if metricsEnable {
+		orbObservedPID.Set(0)
+	}
+
+	// Handle exit status
+	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			os.Exit(exitError.ExitCode())
+		}
+		log.Fatal("green-orb error: Error waiting for Command:", err)
+	} else {
+		os.Exit(0)
+	}
+	return nil
+}
+
+func monitorOutput(pid int, scanner *bufio.Scanner, compiledSignals []CompiledSignal, notificationQueue chan Notification, channelMap map[string]Channel, is_stderr bool) {
+	// Increase buffer to accommodate long log lines (up to 10MB)
+	const maxLogLine = 10 * 1024 * 1024
+	scanner.Buffer(make([]byte, 0, 64*1024), maxLogLine)
+	for scanner.Scan() {
+		line := scanner.Text()
+		suppress := false
+		// Metrics: count events per stream
+		if is_stderr {
+			orbEventsTotal.WithLabelValues("stderr").Inc()
+		} else {
+			orbEventsTotal.WithLabelValues("stdout").Inc()
+		}
+
+		for _, signal := range compiledSignals {
+			match := signal.Regex.FindStringSubmatch(line)
+			if match != nil {
+				channel, _ := channelMap[signal.Channel]
+				orbSignalsMatchedTotal.WithLabelValues(signal.Regex.String(), signal.Channel).Inc()
+				if channel.Type == "suppress" {
+					suppress = true
+				} else {
+					// Rate limiting per channel (optional)
+					if limiter, ok := channelLimiters[signal.Channel]; ok {
+						if !limiter.Allow() {
+							orbDroppedEventsTotal.WithLabelValues("rate_limited").Inc()
+							continue
+						}
+					}
+					// Non-blocking enqueue; drop if full
+					select {
+					case notificationQueue <- Notification{PID: pid, Match: match, Channel: channel, Message: line}:
+					default:
+						orbDroppedEventsTotal.WithLabelValues("queue_full").Inc()
+					}
+				}
+			}
+		}
+
+		if !suppress {
+			if is_stderr {
+				fmt.Fprintln(os.Stderr, line)
+			} else {
+				fmt.Println(line)
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatal("green-orb error: Problem reading from pipe: ", err)
+	}
+}
+
+// startChecksScheduler launches periodic checks and returns a stop function.
+func startChecksScheduler(checks []Check, currentPID func() int, channelMap map[string]Channel, q chan Notification) func() {
+	if len(checks) == 0 {
+		return func() {}
+	}
+	stop := make(chan struct{})
+
+	for _, c := range checks {
+		// Resolve channel exists early
+		if _, ok := channelMap[c.Channel]; !ok {
+			log.Printf("green-orb warning: check %q references unknown channel %q; skipping", c.Name, c.Channel)
+			continue
+		}
+		// Parse intervals/timeouts
+		interval := 15 * time.Second
+		if c.Interval != "" {
+			if d, err := time.ParseDuration(c.Interval); err == nil {
+				interval = d
+			} else {
+				log.Printf("green-orb warning: invalid interval for check %q: %v; using 15s", c.Name, err)
+			}
+		}
+		timeout := 5 * time.Second
+		if c.Timeout != "" {
+			if d, err := time.ParseDuration(c.Timeout); err == nil {
+				timeout = d
+			} else {
+				log.Printf("green-orb warning: invalid timeout for check %q: %v; using 5s", c.Name, err)
+			}
+		}
+
+		switch strings.ToLower(c.Type) {
+		case "http":
+			var bodyRE *regexp.Regexp
+			if c.BodyRegex != "" {
+				re, err := regexp.Compile(c.BodyRegex)
+				if err != nil {
+					log.Printf("green-orb warning: invalid body_regex for check %q: %v; skipping", c.Name, err)
+					continue
+				}
+				bodyRE = re
+			}
+			client := &http.Client{Timeout: timeout}
+			go func(ch Check) {
+				ticker := time.NewTicker(interval)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-stop:
+						return
+					case <-ticker.C:
+						outcome := "success"
+						reqStart := time.Now()
+						resp, err := client.Get(ch.URL)
+						if err != nil {
+							outcome = "error"
+							enqueueNotification(currentPID(), ch.Channel, fmt.Sprintf("check[%s:http] error: %v", ch.Name, err), channelMap, q)
+							orbChecksTotal.WithLabelValues("http", outcome).Inc()
+							continue
+						}
+						func() {
+							defer resp.Body.Close()
+							if ch.ExpectStatus != 0 && resp.StatusCode != ch.ExpectStatus {
+								outcome = "error"
+								enqueueNotification(currentPID(), ch.Channel, fmt.Sprintf("check[%s:http] unexpected status: got %d want %d", ch.Name, resp.StatusCode, ch.ExpectStatus), channelMap, q)
+								return
+							}
+							if bodyRE != nil {
+								// Limit body read to 1MB
+								body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+								if !bodyRE.Match(body) {
+									outcome = "error"
+									enqueueNotification(currentPID(), ch.Channel, fmt.Sprintf("check[%s:http] body does not match regex", ch.Name), channelMap, q)
+									return
+								}
+							}
+						}()
+						_ = reqStart
+						orbChecksTotal.WithLabelValues("http", outcome).Inc()
+					}
+				}
+			}(c)
+		case "tcp":
+			// Use JoinHostPort to support IPv4 and IPv6 host formats
+			address := net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
+			go func(ch Check) {
+				ticker := time.NewTicker(interval)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-stop:
+						return
+					case <-ticker.C:
+						outcome := "success"
+						conn, err := net.DialTimeout("tcp", address, timeout)
+						if err != nil {
+							outcome = "error"
+							enqueueNotification(currentPID(), ch.Channel, fmt.Sprintf("check[%s:tcp] connect error: %v", ch.Name, err), channelMap, q)
+						} else {
+							conn.Close()
+						}
+						orbChecksTotal.WithLabelValues("tcp", outcome).Inc()
+					}
+				}
+			}(c)
+		case "flapping":
+			// Alert when restarts in Window >= RestartThreshold
+			win := 5 * time.Minute
+			if c.Window != "" {
+				if d, err := time.ParseDuration(c.Window); err == nil {
+					win = d
+				} else {
+					log.Printf("green-orb warning: invalid window for check %q: %v; using 5m", c.Name, err)
+				}
+			}
+			threshold := c.RestartThreshold
+			if threshold <= 0 {
+				threshold = 3
+			}
+			var lastAlert time.Time
+			go func(ch Check) {
+				ticker := time.NewTicker(interval)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-stop:
+						return
+					case <-ticker.C:
+						cutoff := time.Now().Add(-win)
+						restartTimesMu.Lock()
+						count := 0
+						for _, t := range restartTimes {
+							if t.After(cutoff) {
+								count++
+							}
+						}
+						restartTimesMu.Unlock()
+						outcome := "success"
+						if count >= threshold {
+							// avoid spamming: only alert once per window
+							if time.Since(lastAlert) > win/2 {
+								enqueueNotification(currentPID(), ch.Channel, fmt.Sprintf("check[%s:flapping] %d restarts within %s", ch.Name, count, win), channelMap, q)
+								lastAlert = time.Now()
+							}
+							outcome = "error"
+						}
+						orbChecksTotal.WithLabelValues("flapping", outcome).Inc()
+					}
+				}
+			}(c)
+		default:
+			log.Printf("green-orb warning: unknown check type %q for check %q; skipping", c.Type, c.Name)
+		}
+	}
+
+	return func() { close(stop) }
+}
+
+// enqueueNotification sends a Notification using existing rate limiting and drop accounting.
+func enqueueNotification(pid int, channelName, message string, channelMap map[string]Channel, q chan Notification) {
+	ch, ok := channelMap[channelName]
+	if !ok {
+		return
+	}
+	if limiter, ok := channelLimiters[channelName]; ok {
+		if !limiter.Allow() {
+			orbDroppedEventsTotal.WithLabelValues("rate_limited").Inc()
+			return
+		}
+	}
+	select {
+	case q <- Notification{PID: pid, Match: nil, Channel: ch, Message: message}:
+	default:
+		orbDroppedEventsTotal.WithLabelValues("queue_full").Inc()
+	}
+}

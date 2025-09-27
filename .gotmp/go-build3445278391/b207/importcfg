@@ -1,0 +1,6 @@
+# import config
+packagefile fmt=/home/green/git/green-orb/.gocache/ec/ecb98db685f9c7d7d2b166923fdde9240c881d95f21bbabdc382433bccdc1445-d
+packagefile github.com/nicholas-fedor/shoutrrr/pkg/services/standard=/home/green/git/green-orb/.gotmp/go-build3445278391/b175/_pkg_.a
+packagefile github.com/nicholas-fedor/shoutrrr/pkg/types=/home/green/git/green-orb/.gotmp/go-build3445278391/b169/_pkg_.a
+packagefile net/url=/home/green/git/green-orb/.gocache/c4/c4d6de2a7ab274f1e5b87e7db22819af043349de9e0dc92df237089bee2690f2-d
+packagefile strings=/home/green/git/green-orb/.gocache/1c/1cd0ccc0c9a200f25f975c2d1d9730a3e5d3fabd80eb9363b4136c66f8756a9e-d

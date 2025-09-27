@@ -1,0 +1,36 @@
+// DeleteACLsRequest deletes acls. This request works on filters the same way
+// that DescribeACLsRequest does. See DescribeACLsRequest for documentation of
+// the fields.
+DeleteACLsRequest => key 31, max version 3, flexible v2+
+  // Filters are filters for acls to delete.
+  Filters: [=>]
+    ResourceType: enum-ACLResourceType
+    ResourceName: nullable-string
+    ResourcePatternType: enum-ACLResourcePatternType(3) // v1+
+    Principal: nullable-string
+    Host: nullable-string
+    Operation: enum-ACLOperation
+    PermissionType: enum-ACLPermissionType
+
+// DeleteACLsResponse is a response for a DeleteACLsRequest.
+DeleteACLsResponse =>
+  ThrottleMillis(1)
+  // Results contains a response to each requested filter.
+  Results: [=>]
+    // ErrorCode is the overall error code for this individual filter.
+    ErrorCode: int16
+    // ErrorMessage is a message for this error.
+    ErrorMessage: nullable-string
+    // MatchingACLs contains all acls that were matched for this filter.
+    MatchingACLs: [=>]
+      // ErrorCode contains an error for this individual acl for this filter.
+      ErrorCode: int16
+      // ErrorMessage is a message for this error.
+      ErrorMessage: nullable-string
+      ResourceType: enum-ACLResourceType
+      ResourceName: string
+      ResourcePatternType: enum-ACLResourcePatternType(3) // v1+
+      Principal: string
+      Host: string
+      Operation: enum-ACLOperation
+      PermissionType: enum-ACLPermissionType

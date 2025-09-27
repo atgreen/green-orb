@@ -1,0 +1,6 @@
+./analyzers_set.go
+./analyzerslist.go
+./conversion_overflow.go
+./hardcodedNonce.go
+./slice_bounds.go
+./util.go

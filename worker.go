@@ -1,16 +1,17 @@
 package main
 
 import (
-	"bytes"
-	"context"
-	"fmt"
-	"log"
-	"os"
-	"os/exec"
-	"sync"
-	"syscall"
-	"text/template"
-	"time"
+    "bytes"
+    "context"
+    "fmt"
+    "log"
+    "strconv"
+    "os"
+    "os/exec"
+    "sync"
+    "syscall"
+    "text/template"
+    "time"
 
 	"github.com/nicholas-fedor/shoutrrr"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -140,17 +141,27 @@ func (wp *WorkerPool) processAction(req ActionRequest) {
 			log.Printf("green-orb warning: exec channel failed: %v", err)
 			outcome = "error"
 		}
-	case "kafka":
-		if err := wp.executeKafka(channel, req.logline); err != nil {
-			log.Printf("green-orb warning: kafka send failed: %v", err)
-			outcome = "error"
-		}
-	case "restart":
-		wp.executeRestart()
-	case "kill":
-		wp.executeKill()
-	case "suppress":
-		// No action needed for suppress
+    case "kafka":
+        if err := wp.executeKafka(channel, req.logline); err != nil {
+            log.Printf("green-orb warning: kafka send failed: %v", err)
+            outcome = "error"
+        }
+    case "enable_signal":
+        if err := wp.executeEnableSignal(channel, td); err != nil {
+            log.Printf("green-orb warning: enable_signal failed: %v", err)
+            outcome = "error"
+        }
+    case "disable_signal":
+        if err := wp.executeDisableSignal(channel, td); err != nil {
+            log.Printf("green-orb warning: disable_signal failed: %v", err)
+            outcome = "error"
+        }
+    case "restart":
+        wp.executeRestart()
+    case "kill":
+        wp.executeKill()
+    case "suppress":
+        // No action needed for suppress
 	}
 
 	// Update metrics
@@ -190,6 +201,83 @@ func (wp *WorkerPool) executeNotify(channel Channel, td TemplateData) error {
 	}
 
 	return shoutrrr.Send(urlBuf.String(), message)
+}
+
+// executeSignalToggle enables/disables a named signal, optionally with a duration TTL for enable
+func (wp *WorkerPool) executeEnableSignal(channel Channel, td TemplateData) error {
+    // Allow templating of target_signal, state, and duration
+    eval := func(s string) (string, error) {
+        if s == "" {
+            return s, nil
+        }
+        tmpl, err := template.New("field").Parse(s)
+        if err != nil {
+            return "", fmt.Errorf("parse template: %w", err)
+        }
+        var buf bytes.Buffer
+        if err := tmpl.Execute(&buf, td); err != nil {
+            return "", fmt.Errorf("exec template: %w", err)
+        }
+        return buf.String(), nil
+    }
+
+    name, err := eval(channel.TargetSignal)
+    if err != nil {
+        return fmt.Errorf("target_signal: %w", err)
+    }
+    durStr, err := eval(channel.Duration)
+    if err != nil {
+        return fmt.Errorf("duration: %w", err)
+    }
+
+    if name == "" {
+        return fmt.Errorf("target_signal is empty")
+    }
+
+    var ttl *time.Duration
+    if durStr != "" {
+        // Permit integer seconds for convenience
+        if secs, err2 := strconv.Atoi(durStr); err2 == nil {
+            d := time.Duration(secs) * time.Second
+            ttl = &d
+        } else {
+            d, err := time.ParseDuration(durStr)
+            if err != nil {
+                return fmt.Errorf("invalid duration %q: %w", durStr, err)
+            }
+            ttl = &d
+        }
+    }
+
+    signalManager.Enable(name, ttl)
+    return nil
+}
+
+func (wp *WorkerPool) executeDisableSignal(channel Channel, td TemplateData) error {
+    eval := func(s string) (string, error) {
+        if s == "" {
+            return s, nil
+        }
+        tmpl, err := template.New("field").Parse(s)
+        if err != nil {
+            return "", fmt.Errorf("parse template: %w", err)
+        }
+        var buf bytes.Buffer
+        if err := tmpl.Execute(&buf, td); err != nil {
+            return "", fmt.Errorf("exec template: %w", err)
+        }
+        return buf.String(), nil
+    }
+
+    name, err := eval(channel.TargetSignal)
+    if err != nil {
+        return fmt.Errorf("target_signal: %w", err)
+    }
+    if name == "" {
+        return fmt.Errorf("target_signal is empty")
+    }
+    signalManager.Disable(name)
+    return nil
 }
 
 // executeExec runs a shell command

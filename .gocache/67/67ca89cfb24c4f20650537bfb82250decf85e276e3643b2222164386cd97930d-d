@@ -1,0 +1,3 @@
+./ifttt.go
+./ifttt_config.go
+./ifttt_json.go

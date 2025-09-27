@@ -1,0 +1,38 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
+    steps:
+      - name: Setup go
+        uses: actions/setup-go@v5
+      - name: Checkout Source 
+        uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Check Formating
+        run: make fmt
+      - name: Checks basic sanity
+        run: make vet
+      - name: Check lint warnings
+        uses: golangci/golangci-lint-action@v3
+      - name: Check static security
+        uses: securego/gosec@master
+        with:
+          args: ./...
+      - name: Check dependencies vulnerabilities
+        run: make govulncheck
+      - name: Run unit and fuzz tests
+        run: make test

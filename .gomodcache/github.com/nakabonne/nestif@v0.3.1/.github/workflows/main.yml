@@ -1,0 +1,25 @@
+on: [push, pull_request]
+name: main
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version: [1.14.x, 1.15.x]
+        platform: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Checkout code
+      uses: actions/checkout@v1
+    - name: Build
+      run: go build ./cmd/nestif
+    - name: Test
+      run: go test -v -coverpkg=./... -covermode=atomic -coverprofile=coverage.txt ./...
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.txt

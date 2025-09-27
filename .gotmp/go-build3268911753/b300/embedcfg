@@ -1,0 +1,14 @@
+{
+	"Patterns": {
+		"autocomplete": [
+			"autocomplete/bash_autocomplete",
+			"autocomplete/powershell_autocomplete.ps1",
+			"autocomplete/zsh_autocomplete"
+		]
+	},
+	"Files": {
+		"autocomplete/bash_autocomplete": "/home/green/git/green-orb/.gomodcache/github.com/urfave/cli/v3@v3.0.0-beta1/autocomplete/bash_autocomplete",
+		"autocomplete/powershell_autocomplete.ps1": "/home/green/git/green-orb/.gomodcache/github.com/urfave/cli/v3@v3.0.0-beta1/autocomplete/powershell_autocomplete.ps1",
+		"autocomplete/zsh_autocomplete": "/home/green/git/green-orb/.gomodcache/github.com/urfave/cli/v3@v3.0.0-beta1/autocomplete/zsh_autocomplete"
+	}
+}

@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: "Lint"
+    strategy:
+      matrix:
+        go-version: [ "1.21" ]
+        os: [ "ubuntu-latest" ]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      pull-requests: read
+      contents: read
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+          check-latest: true
+      - uses: actions/checkout@v4
+      - name: "Lint"
+        uses: golangci/golangci-lint-action@v6
+        with:
+          only-new-issues: true
+          args: --timeout 5m --issues-exit-code 0
+
+
+  test:
+    name: "Test"
+    strategy:
+      matrix:
+        go-version: [ "1.20", "1.21" ]
+        os: [ "ubuntu-latest", "windows-latest", "macos-latest" ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          check-latest: true
+      - name: "Run tests"
+        run: go test -json ./... > test.json
+
+      - name: "Annotate tests"
+        if: always()
+        uses: guyarb/golang-test-annotations@v0.8.0
+        with:
+          test-results: test.json
+
+  dependabot-merge:
+    name: "Dependabot auto-merge"
+    runs-on: ubuntu-latest
+    needs: [ "lint", "test" ]
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - uses: fastify/github-action-merge-dependabot@v3.10.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

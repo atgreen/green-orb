@@ -1,0 +1,19 @@
+name: Update pkg.go.dev
+
+on:
+  - workflow_dispatch
+  - workflow_call
+
+permissions:
+  contents: read
+
+jobs:
+  update-go-docs:
+    name: Update pkg.go.dev
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull new module version
+        uses: nicholas-fedor/go-proxy-pull-action@5bb09e78c6aec336e3b39e45165e1a37206881af
+        with:
+          goproxy: https://proxy.golang.org
+          import_path: github.com/nicholas-fedor/shoutrrr

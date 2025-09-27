@@ -1,0 +1,3 @@
+./join.go
+./join_config.go
+./join_errors.go

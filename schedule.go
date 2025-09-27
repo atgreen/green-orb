@@ -80,7 +80,9 @@ func (sr *ScheduleRunner) Start() {
                 for {
                     select {
                     case <-tk.C:
-                        sr.trigger(sched, "every")
+                        if signalManager.IsEnabled(sched.Name) {
+                            sr.trigger(sched, "every")
+                        }
                     case <-sr.stopChan:
                         tk.Stop()
                         return
@@ -92,7 +94,11 @@ func (sr *ScheduleRunner) Start() {
         if s.Cron != "" {
             // Add cron job
             sched := s
-            _, err := sr.cron.AddFunc(s.Cron, func() { sr.trigger(sched, "cron") })
+            _, err := sr.cron.AddFunc(s.Cron, func() {
+                if signalManager.IsEnabled(sched.Name) {
+                    sr.trigger(sched, "cron")
+                }
+            })
             if err != nil {
                 log.Printf("green-orb error: invalid cron spec for %s: %v", s.Name, err)
             }

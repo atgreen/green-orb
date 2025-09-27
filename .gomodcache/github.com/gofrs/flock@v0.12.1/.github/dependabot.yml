@@ -1,0 +1,26 @@
+# Please see the documentation for all configuration options:
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: "/"
+    groups:
+      all:
+        patterns:
+          - "*"  # Group all updates into a single larger pull request.
+    schedule:
+      interval: weekly
+      day: sunday
+      time: "11:00" # 11am UTC
+
+  - package-ecosystem: github-actions
+    directory: /
+    groups:
+      all:
+        patterns:
+          - "*"  # Group all updates into a single larger pull request.
+    schedule:
+      interval: monthly
+      day: sunday
+      time: "11:00" # 11am UTC

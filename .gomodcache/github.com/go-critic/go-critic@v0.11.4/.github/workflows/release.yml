@@ -1,0 +1,15 @@
+name: release
+
+# temporary fix
+on: workflow_dispatch
+
+jobs:
+  update_draft_release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v4
+
+      - name: Docs
+        run: |
+          make docs

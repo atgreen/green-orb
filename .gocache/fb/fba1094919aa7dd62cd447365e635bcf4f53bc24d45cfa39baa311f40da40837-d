@@ -1,0 +1,11 @@
+./checkstyle.go
+./default.go
+./doc.go
+./friendly.go
+./json.go
+./ndjson.go
+./plain.go
+./sarif.go
+./severity.go
+./stylish.go
+./unix.go

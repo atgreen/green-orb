@@ -38,7 +38,7 @@ import (
     "sync"
 )
 
-var version = "dev"
+var version = "1.1.0"
 
 // loadEnvFile loads environment variables from a .env file
 func loadEnvFile(filepath string) error {
@@ -342,6 +342,9 @@ func runObserved(configFilePath string, numWorkers int64, metricsAddr string, en
 			defer wg.Done()
 			monitor.MonitorOutput(bufio.NewScanner(stderr), true)
 		}()
+
+        // Initialize signal manager states
+        signalManager.Init(config.Signals)
 
         // Start time-based signals (schedules) if configured
         var scheduleRunner *ScheduleRunner

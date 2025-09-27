@@ -1,0 +1,6 @@
+./smtp.go
+./smtp_authtype.go
+./smtp_config.go
+./smtp_encmethod.go
+./smtp_failures.go
+./smtp_oauth2.go

@@ -1,0 +1,9 @@
+./compile.go
+./compile_import.go
+./gogrep.go
+./instructions.go
+./match.go
+./operation_string.go
+./operations.gen.go
+./parse.go
+./slices.go

@@ -1,0 +1,11 @@
+./compiler.go
+./content.go
+./doc.go
+./draft.go
+./errors.go
+./extension.go
+./format.go
+./loader.go
+./output.go
+./resource.go
+./schema.go

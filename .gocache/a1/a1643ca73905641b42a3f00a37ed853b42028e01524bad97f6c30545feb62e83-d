@@ -1,0 +1,3 @@
+./api.go
+./generated.go
+./record.go

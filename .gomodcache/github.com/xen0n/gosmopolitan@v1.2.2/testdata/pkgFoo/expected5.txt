@@ -1,0 +1,11 @@
+ROOT/foo.go:25:13: string literal contains rune in Han script
+ROOT/foo.go:26:13: string literal contains rune in Han script
+ROOT/foo.go:31:15: string literal contains rune in Han script
+ROOT/foo.go:32:31: string literal contains rune in Han script
+ROOT/foo.go:33:24: string literal contains rune in Han script
+ROOT/bar.go:8:18: usage of time.Local
+ROOT/baz.go:8:34: usage of time.Local
+ROOT/foo.go:31:56: usage of time.Local
+ROOT/foo.go:33:108: usage of time.Local
+ROOT/quux.go:9:12: usage of time.Local
+ROOT/foo_test.go:6:9: string literal contains rune in Han script

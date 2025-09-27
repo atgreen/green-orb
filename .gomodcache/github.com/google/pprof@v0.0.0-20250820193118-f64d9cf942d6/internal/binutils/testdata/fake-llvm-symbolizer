@@ -1,0 +1,39 @@
+#!/bin/sh
+#
+# Copyright 2014 Google Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Fake llvm-symbolizer to use in tests
+
+set -f
+IFS=" "
+
+while read line; do
+  # line has form:
+  #    filename 0xaddr
+  # Emit dummy output that matches llvm-symbolizer JSON output format.
+  set -- ${line}
+  kind=$1
+  fname=$2
+  addr=$3
+  case ${kind} in
+  CODE)
+    echo "{\"Address\":\"${addr}\",\"ModuleName\":\"${fname}\",\"Symbol\":[{\"Column\":0,\"FileName\":\"${fname}.h\",\"FunctionName\":\"Inlined_${addr}\",\"Line\":0,\"StartLine\":0},{\"Column\":1,\"FileName\":\"${fname}.c\",\"FunctionName\":\"Func_${addr}\",\"Line\":2,\"StartLine\":2}]}"
+    ;;
+  DATA)
+    echo "{\"Address\":\"${addr}\",\"ModuleName\":\"${fname}\",\"Data\":{\"Name\":\"${fname}_${addr}\",\"Size\":\"0x8\",\"Start\":\"${addr}\"}}"
+    ;;
+  *) exit 1;;
+  esac
+done

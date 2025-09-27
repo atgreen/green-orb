@@ -1,0 +1,9 @@
+./analyzer.go
+./checkers_bufio.go
+./checkers_bytes.go
+./checkers_httptest.go
+./checkers_maphash.go
+./checkers_os.go
+./checkers_regexp.go
+./checkers_strings.go
+./checkers_utf8.go

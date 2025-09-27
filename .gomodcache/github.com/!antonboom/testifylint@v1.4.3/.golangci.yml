@@ -1,0 +1,117 @@
+run:
+  tests: true
+
+issues:
+  max-same-issues: 0
+
+  # revive should check comments for exported (and not internal) code.
+  include: [ EXC0012, EXC0013, EXC0014 ]
+
+  exclude-dirs:
+    - internal/checkers/printf # A patched fork of go vet's printf.
+
+  exclude-rules:
+    - path: "internal/testgen"
+      linters: [ "revive" ]
+      text: "exported"
+
+    - path: "internal/testgen"
+      linters: [ "forbidigo", "gochecknoinits", "prealloc" ] # Internal test generation tool.
+
+    - path: "internal"
+      linters: [ "revive" ]
+      text: "exported (method|const)"
+
+    - path: "_test\\.go"
+      linters: [ "lll" ]
+
+    - source: ' // want "'
+      linters: [ "lll" ]
+
+linters-settings:
+  depguard:
+    rules:
+      analysisutil:
+        files: [ "**/internal/analysisutil/*.go" ]
+        deny:
+          - pkg: golang.org/x/tools/go/analysis
+            desc: Please, implement helpers without usage of x/tools
+
+  forbidigo:
+    forbid:
+      - p: panic
+        msg: Please, don't panic
+
+      - p: types\.ExprString
+        msg: Please, use analysisutil.NodeBytes/NodeString instead
+
+  gocritic:
+    disabled-checks:
+      - singleCaseSwitch
+
+  gosec:
+    excludes:
+      - "G306" # Expect WriteFile permissions to be 0600 or less
+
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/Antonboom/testifylint)
+
+  lll:
+    line-length: 130
+
+linters:
+  disable-all: true
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - depguard
+    - errcheck
+    - errname
+    - exhaustive
+    - exportloopref
+    - forbidigo
+    - gci
+    - gocheckcompilerdirectives
+    - gochecknoinits
+    - gocritic
+    - godot
+    - godox
+    - gofumpt
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - makezero
+    - mirror
+    - misspell
+    - nakedret
+    - nilerr
+    - nestif
+    - nolintlint
+    - prealloc
+    - predeclared
+    - reassign
+    - revive
+    - staticcheck
+    - stylecheck
+    - tenv
+    - testableexamples
+    - testpackage
+    - thelper
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - wastedassign
+    - whitespace

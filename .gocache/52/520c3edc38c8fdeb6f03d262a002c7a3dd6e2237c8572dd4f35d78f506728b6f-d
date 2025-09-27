@@ -1,0 +1,3 @@
+./gotify.go
+./gotify_config.go
+./gotify_json.go

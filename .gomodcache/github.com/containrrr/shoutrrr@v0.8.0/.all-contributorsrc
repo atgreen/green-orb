@@ -1,0 +1,149 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "amirschnell",
+      "name": "Amir Schnell",
+      "avatar_url": "https://avatars3.githubusercontent.com/u/9380508?v=4",
+      "profile": "https://github.com/amirschnell",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "piksel",
+      "name": "nils måsén",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/807383?v=4",
+      "profile": "https://piksel.se",
+      "contributions": [
+        "code",
+        "doc",
+        "maintenance"
+      ]
+    },
+    {
+      "login": "lukapeschke",
+      "name": "Luka Peschke",
+      "avatar_url": "https://avatars1.githubusercontent.com/u/17085536?v=4",
+      "profile": "https://github.com/lukapeschke",
+      "contributions": [
+        "code",
+        "doc"
+      ]
+    },
+    {
+      "login": "MrLuje",
+      "name": "MrLuje",
+      "avatar_url": "https://avatars0.githubusercontent.com/u/632075?v=4",
+      "profile": "https://github.com/MrLuje",
+      "contributions": [
+        "code",
+        "doc"
+      ]
+    },
+    {
+      "login": "simskij",
+      "name": "Simon Aronsson",
+      "avatar_url": "https://avatars0.githubusercontent.com/u/1596025?v=4",
+      "profile": "http://simme.dev",
+      "contributions": [
+        "code",
+        "doc",
+        "maintenance"
+      ]
+    },
+    {
+      "login": "arnested",
+      "name": "Arne Jørgensen",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/190005?v=4",
+      "profile": "https://arnested.dk",
+      "contributions": [
+        "doc",
+        "code"
+      ]
+    },
+    {
+      "login": "atighineanu",
+      "name": "Alexei Tighineanu",
+      "avatar_url": "https://avatars1.githubusercontent.com/u/27206712?v=4",
+      "profile": "https://github.com/atighineanu",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "ellisab",
+      "name": "Alexandru Bonini",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/1402047?v=4",
+      "profile": "https://github.com/ellisab",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "sentriz",
+      "name": "Senan Kelly",
+      "avatar_url": "https://avatars0.githubusercontent.com/u/6832539?v=4",
+      "profile": "https://senan.xyz",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "JonasPf",
+      "name": "JonasPf",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2216775?v=4",
+      "profile": "https://github.com/JonasPf",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "claycooper",
+      "name": "claycooper",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3612906?v=4",
+      "profile": "https://github.com/claycooper",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "darktohka",
+      "name": "Derzsi Dániel",
+      "avatar_url": "https://avatars.githubusercontent.com/u/16326697?v=4",
+      "profile": "http://ko-fi.com/disyer",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "JosephKav",
+      "name": "Joseph Kavanagh",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4267227?v=4",
+      "profile": "https://josephkav.io",
+      "contributions": [
+        "code",
+        "bug"
+      ]
+    },
+    {
+      "login": "justinsteven",
+      "name": "Justin Steven",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1893909?v=4",
+      "profile": "https://ring0.lol",
+      "contributions": [
+        "bug"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "projectName": "shoutrrr",
+  "projectOwner": "containrrr",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true
+}

@@ -1,0 +1,7 @@
+./analyzer.go
+./config.go
+./issue.go
+./location.go
+./option.go
+./reader.go
+./value.go

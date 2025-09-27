@@ -1,0 +1,4 @@
+def github.com/klauspost/compress/huff0.decompress4x_main_loop_amd64 ABI0
+def github.com/klauspost/compress/huff0.decompress4x_8b_main_loop_amd64 ABI0
+def github.com/klauspost/compress/huff0.decompress1x_main_loop_amd64 ABI0
+def github.com/klauspost/compress/huff0.decompress1x_main_loop_bmi2 ABI0

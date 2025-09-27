@@ -1,0 +1,4 @@
+ignored:
+    - DL3008 # missing version pin in apt
+    - DL3018 # missing version pin in apk
+failure-threshold: info

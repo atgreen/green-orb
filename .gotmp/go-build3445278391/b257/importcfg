@@ -1,0 +1,7 @@
+# import config
+packagefile google.golang.org/protobuf/internal/descopts=/home/green/git/green-orb/.gotmp/go-build3445278391/b243/_pkg_.a
+packagefile google.golang.org/protobuf/internal/filedesc=/home/green/git/green-orb/.gotmp/go-build3445278391/b241/_pkg_.a
+packagefile google.golang.org/protobuf/internal/impl=/home/green/git/green-orb/.gotmp/go-build3445278391/b258/_pkg_.a
+packagefile google.golang.org/protobuf/reflect/protoreflect=/home/green/git/green-orb/.gotmp/go-build3445278391/b234/_pkg_.a
+packagefile google.golang.org/protobuf/reflect/protoregistry=/home/green/git/green-orb/.gotmp/go-build3445278391/b255/_pkg_.a
+packagefile reflect=/home/green/git/green-orb/.gocache/ac/ac3ddfeefcfbc7a6eff37144242a9d59313db8462a58437fa501bb6afb7ac6f8-d

@@ -1,0 +1,13 @@
+builds:
+- main: .
+  targets: [go_first_class]
+  flags: [-trimpath]
+  mod_timestamp: '{{.CommitTimestamp}}'
+  ldflags: [-s -w]
+  env: [CGO_ENABLED=0]
+archives:
+- format_overrides:
+  - goos: windows
+    format: zip
+checksum:
+  name_template: 'checksums.txt'

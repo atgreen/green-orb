@@ -1,0 +1,26 @@
+name: Lint
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.19'
+
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v3.3.0
+      with:
+        version: v1.49.0
+        # skip cache becausez of flaky behaviors
+        skip-build-cache: true
+        skip-pkg-cache: true

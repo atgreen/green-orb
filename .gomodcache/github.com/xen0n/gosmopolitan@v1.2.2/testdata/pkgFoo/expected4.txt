@@ -1,0 +1,1 @@
+ROOT/foo.go:30:7: string literal contains rune in Devanagari script

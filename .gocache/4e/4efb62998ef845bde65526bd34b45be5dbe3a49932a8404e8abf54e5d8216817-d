@@ -1,0 +1,17 @@
+./decode.go
+./decode_asm.go
+./dict.go
+./encode.go
+./encode_all.go
+./encode_amd64.go
+./encode_best.go
+./encode_better.go
+./encodeblock_amd64.go
+./index.go
+./lz4convert.go
+./lz4sconvert.go
+./reader.go
+./s2.go
+./writer.go
+./decode_amd64.s
+./encodeblock_amd64.s

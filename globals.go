@@ -20,11 +20,14 @@ var (
 	restartTimes   []time.Time
 
 	// Metrics enable flag
-	metricsEnable bool
+    metricsEnable bool
 
     // Channels map for global access
     //nolint:unused  // referenced in tests
     channels map[string]Channel
+
+    // Runtime signal manager
+    signalManager = NewSignalManager()
 )
 
 // TemplateData contains data available to templates

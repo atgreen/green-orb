@@ -1,0 +1,27 @@
+# Adapted from https://github.com/mvdan/github-actions-golang/blob/b7c76395d24d6483ab668e5bf1e6d0cb2794c831/README.md
+
+on: [ 'push', 'pull_request' ]
+name: BuildAndTest
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version:
+          - '1.18.x'
+          - '1.19.x'
+          - '1.20.x'
+          - '1.21.x'
+          - '1.22.x'
+        os: [ 'ubuntu-latest', 'macos-latest', 'windows-latest' ]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Build
+      run: make build
+    - name: Test
+      run: make test

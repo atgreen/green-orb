@@ -1,0 +1,4 @@
+./checks.go
+./getters.go
+./godot.go
+./settings.go

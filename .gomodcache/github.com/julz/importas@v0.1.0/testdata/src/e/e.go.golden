@@ -1,0 +1,13 @@
+package e
+
+import (
+	fff "fmt"  // want `import "fmt" imported as "wrong_alias" but must be "fff" according to config`
+	iio "io"   // want `import "io" imported without alias but must be with alias "iio" according to config`
+	stdos "os" // want `import "os" imported as "wrong_alias_again" but must be "stdos" according to config`
+)
+
+func ImportAsWrongAlias() {
+	fff.Println("foo")
+	stdos.Stdout.WriteString("bar")
+	iio.Pipe()
+}

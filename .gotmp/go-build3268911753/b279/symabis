@@ -1,0 +1,11 @@
+def github.com/klauspost/compress/zstd/internal/xxhash.Sum64 ABI0
+ref github.com/klauspost/compress/zstd/internal/xxhash.primes ABI0
+ref github.com/klauspost/compress/zstd/internal/xxhash.primes ABI0
+ref github.com/klauspost/compress/zstd/internal/xxhash.primes ABI0
+ref github.com/klauspost/compress/zstd/internal/xxhash.primes ABI0
+ref github.com/klauspost/compress/zstd/internal/xxhash.primes ABI0
+ref github.com/klauspost/compress/zstd/internal/xxhash.primes ABI0
+ref github.com/klauspost/compress/zstd/internal/xxhash.primes ABI0
+def github.com/klauspost/compress/zstd/internal/xxhash.writeBlocks ABI0
+ref github.com/klauspost/compress/zstd/internal/xxhash.primes ABI0
+ref github.com/klauspost/compress/zstd/internal/xxhash.primes ABI0

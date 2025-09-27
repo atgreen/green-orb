@@ -1,0 +1,9 @@
+./ast.go
+./errors.go
+./lexer.go
+./operation.go
+./operation_string.go
+./parser.go
+./pos.go
+./tokenkind_string.go
+./utils.go

@@ -1,0 +1,97 @@
+// AddPartitionsToTxnRequest begins the producer side of a transaction for all
+// partitions in the request. Before producing any records to a partition in
+// the transaction, that partition must have been added to the transaction with
+// this request.
+//
+// Versions 3 and below are exclusively used by clients and versions 4 and
+// above are used by brokers.
+//
+// Version 4 adds VerifyOnly field to check if partitions are already in
+// transaction and adds support to batch multiple transactions.
+AddPartitionsToTxnRequest => key 24, max version 5, flexible v3+, txn coordinator
+  // TransactionalID is the transactional ID to use for this request.
+  TransactionalID: string // v0-v3
+  // ProducerID is the producer ID of the client for this transactional ID
+  // as received from InitProducerID.
+  ProducerID: int64 // v0-v3
+  // ProducerEpoch is the producer epoch of the client for this transactional ID
+  // as received from InitProducerID.
+  ProducerEpoch: int16 // v0-v3
+  // Topics are topics to add as part of the producer side of a transaction.
+  Topics: [=>] // v0-v3
+    // Topic is a topic name.
+    Topic: string
+    // Partitions are partitions within a topic to add as part of the producer
+    // side of a transaction.
+    Partitions: [int32]
+  // The list of transactions to add partitions to, for v4+, for brokers only.
+  // The fields in this are batch broker requests that duplicate the above fields
+  // and thus are undocumented (except VerifyOnly, which is new).
+  Transactions: [=>] // v4+
+    TransactionalID: string
+    ProducerID: int64
+    ProducerEpoch: int16
+    // VerifyOnly signifies if we want to check if the partition is in the
+    // transaction rather than add it.
+    VerifyOnly: bool
+    Topics: [=>]
+      Topic: string
+      Partitions: [int32]
+
+// AddPartitionsToTxnResponse is a response to an AddPartitionsToTxnRequest.
+AddPartitionsToTxnResponse =>
+  ThrottleMillis(1)
+  // The response top level error code.
+  ErrorCode: int16 // v4+
+  // Results categorized by transactional ID, v4+ only, for brokers only.
+  // The fields duplicate v3 and below fields (except TransactionalID) and
+  // are left undocumented.
+  Transactions: [=>] // v4+
+    // The transactional id corresponding to the transaction.
+    TransactionalID: string
+    Topics: [=>]
+      Topic: string
+      Partitions: [=>]
+        Partition: int32
+        ErrorCode: int16
+  // Topics are responses to topics in the request.
+  Topics: [=>] // v0-v3
+    // Topic is a topic being responded to.
+    Topic: string
+    // Partitions are responses to partitions in the request.
+    Partitions: [=>]
+      // Partition is a partition being responded to.
+      Partition: int32
+      // ErrorCode is any error for this topic/partition commit.
+      //
+      // TRANSACTIONAL_ID_AUTHORIZATION_FAILED is returned if the client is
+      // not authorized for write with transactional IDs with the requested
+      // transactional ID.
+      //
+      // TOPIC_AUTHORIZATION_FAILED is returned for all topics that the client
+      // is not authorized to write to.
+      //
+      // UNKNOWN_TOPIC_OR_PARTITION is returned for all topics or partitions
+      // that the broker does not know of.
+      //
+      // OPERATION_NOT_ATTEMPTED is returned if any of the above errors occur
+      // for all partitions that did not have the above errors.
+      //
+      // INVALID_REQUEST is returned if the transactional ID is invalid.
+      //
+      // COORDINATOR_LOAD_IN_PROGRESS is returned if the coordinator for this
+      // transactional ID is still loading.
+      //
+      // NOT_COORDINATOR is returned if the broker is not the coordinator for
+      // this transactional ID.
+      //
+      // INVALID_PRODUCER_ID_MAPPING is returned if the produce request used
+      // a producer ID that is not tied to the transactional ID (i.e., mismatch
+      // from what was returned from InitProducerID).
+      //
+      // INVALID_PRODUCER_EPOCH is returned if the requested epoch does not match
+      // the broker epoch for this transactional ID.
+      //
+      // CONCURRENT_TRANSACTIONS is returned if there is an ongoing transaction for
+      // this transactional ID, if the producer ID and epoch matches the broker's.
+      ErrorCode: int16

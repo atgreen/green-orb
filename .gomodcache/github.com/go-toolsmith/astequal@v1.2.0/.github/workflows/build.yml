@@ -1,0 +1,34 @@
+name: build
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 'stable'
+
+    - name: Go Format
+      run: gofmt -s -w . && git diff --exit-code
+
+    - name: Go Tidy
+      run: go mod tidy && git diff --exit-code
+
+    - name: Go Mod
+      run: go mod download
+
+    - name: Build
+      run: go build ./...
+
+    - name: Test
+      run: go test -v -race -shuffle=on ./...

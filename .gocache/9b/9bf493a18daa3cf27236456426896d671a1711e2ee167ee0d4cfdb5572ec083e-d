@@ -1,0 +1,9 @@
+./compile.go
+./debug_info.go
+./disasm.go
+./env.go
+./eval.go
+./opcode_string.go
+./opcodes.gen.go
+./quasigo.go
+./utils.go

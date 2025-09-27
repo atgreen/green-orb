@@ -1,0 +1,26 @@
+name: Snyk
+
+on: push
+
+permissions:
+  actions: none
+  checks: none
+  contents: read
+  deployments: none
+  issues: none
+  packages: none
+  pull-requests: none
+  repository-projects: none
+  security-events: none
+  statuses: none
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Run Snyk to check for vulnerabilities
+      uses: snyk/actions/golang@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

@@ -1,0 +1,4 @@
+# import config
+packagefile context=/home/green/git/green-orb/.gocache/e9/e9d73a00ca11040702a07322d1c1098ff9308ee65b9a1d88c017669e7b2d05e2-d
+packagefile errors=/home/green/git/green-orb/.gocache/f4/f41f0bd5ddd3970a457c7f7d070087cac3aaad5c4987393a2776f36f92c18128-d
+packagefile github.com/twmb/franz-go/pkg/sasl=/home/green/git/green-orb/.gotmp/go-build3268911753/b298/_pkg_.a

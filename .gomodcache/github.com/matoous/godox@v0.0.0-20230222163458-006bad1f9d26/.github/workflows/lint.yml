@@ -1,0 +1,31 @@
+name: Run linters
+
+on: [push]
+
+jobs:
+  revive-lint:
+    name: Revive
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v1
+
+      - name: Run Revive
+        uses: docker://morphy/revive-action:v1
+        with:
+          config: .revive.toml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  golang-ci-lint:
+    name: GolangCI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v1
+      - name: Run GolangCI-Lint
+        uses: docker://matousdz/golangci-lint-action:v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          config: .golangci.yml

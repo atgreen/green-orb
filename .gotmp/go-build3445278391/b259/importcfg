@@ -1,0 +1,17 @@
+# import config
+packagefile fmt=/home/green/git/green-orb/.gocache/ec/ecb98db685f9c7d7d2b166923fdde9240c881d95f21bbabdc382433bccdc1445-d
+packagefile google.golang.org/protobuf/encoding/protowire=/home/green/git/green-orb/.gotmp/go-build3445278391/b235/_pkg_.a
+packagefile google.golang.org/protobuf/internal/encoding/messageset=/home/green/git/green-orb/.gotmp/go-build3445278391/b251/_pkg_.a
+packagefile google.golang.org/protobuf/internal/encoding/text=/home/green/git/green-orb/.gotmp/go-build3445278391/b247/_pkg_.a
+packagefile google.golang.org/protobuf/internal/errors=/home/green/git/green-orb/.gotmp/go-build3445278391/b236/_pkg_.a
+packagefile google.golang.org/protobuf/internal/flags=/home/green/git/green-orb/.gotmp/go-build3445278391/b248/_pkg_.a
+packagefile google.golang.org/protobuf/internal/genid=/home/green/git/green-orb/.gotmp/go-build3445278391/b252/_pkg_.a
+packagefile google.golang.org/protobuf/internal/order=/home/green/git/green-orb/.gotmp/go-build3445278391/b254/_pkg_.a
+packagefile google.golang.org/protobuf/internal/pragma=/home/green/git/green-orb/.gotmp/go-build3445278391/b239/_pkg_.a
+packagefile google.golang.org/protobuf/internal/set=/home/green/git/green-orb/.gotmp/go-build3445278391/b260/_pkg_.a
+packagefile google.golang.org/protobuf/internal/strs=/home/green/git/green-orb/.gotmp/go-build3445278391/b249/_pkg_.a
+packagefile google.golang.org/protobuf/proto=/home/green/git/green-orb/.gotmp/go-build3445278391/b253/_pkg_.a
+packagefile google.golang.org/protobuf/reflect/protoreflect=/home/green/git/green-orb/.gotmp/go-build3445278391/b234/_pkg_.a
+packagefile google.golang.org/protobuf/reflect/protoregistry=/home/green/git/green-orb/.gotmp/go-build3445278391/b255/_pkg_.a
+packagefile strconv=/home/green/git/green-orb/.gocache/77/77060844c85caac6071d567bd8232edc9d3e5e251b953c44f5fe4e3111cbc8d5-d
+packagefile unicode/utf8=/home/green/git/green-orb/.gocache/a7/a70affd47ae8992893b0401c4708b4bc2ae3bb7d7b7a6d11627a1fda0e328c44-d

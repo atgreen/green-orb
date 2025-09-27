@@ -1,0 +1,81 @@
+run:
+  tests: true
+
+issues:
+  max-same-issues: 0
+
+linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/Antonboom/errname)
+
+linters:
+  disable-all: true
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - dogsled
+    - dupl
+    - durationcheck
+    - errcheck
+    - errchkjson
+    - errname
+    - execinquery
+    - exhaustive
+    - exportloopref
+    - forbidigo
+    - gci
+    - gocheckcompilerdirectives
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - gofmt
+    - gofumpt
+    - goheader
+    - goimports
+    - gomnd
+    - gomoddirectives
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - importas
+    - ineffassign
+    - lll
+    - makezero
+    - misspell
+    - mirror
+    - nakedret
+    - nilerr
+    - nilnil
+    - nestif
+    - noctx
+    - nolintlint
+    - nosprintfhostport
+    - prealloc
+    - predeclared
+    - reassign
+    - revive
+    - sqlclosecheck
+    - staticcheck
+    - stylecheck
+    - tagliatelle
+    - tenv
+    - testableexamples
+    - thelper
+    - tparallel
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - wastedassign
+    - whitespace

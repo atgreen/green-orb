@@ -1,0 +1,18 @@
+! exec unparam .
+cmp stdout stdout.golden
+
+-- go.mod --
+module testdata.tld/foo
+-- stdout.golden --
+foo.go:6:20: parent$1 - f is unused
+-- foo.go --
+package foo
+
+var DoWork func()
+
+func parent() {
+	oneUnused := func(f int) {
+		DoWork()
+	}
+	oneUnused(3)
+}

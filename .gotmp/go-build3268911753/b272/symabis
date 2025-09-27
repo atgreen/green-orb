@@ -1,0 +1,12 @@
+def github.com/klauspost/compress/zstd.buildDtable_asm ABI0
+def github.com/klauspost/compress/zstd.matchLen ABI0
+def github.com/klauspost/compress/zstd.sequenceDecs_decode_amd64 ABI0
+def github.com/klauspost/compress/zstd.sequenceDecs_decode_56_amd64 ABI0
+def github.com/klauspost/compress/zstd.sequenceDecs_decode_bmi2 ABI0
+def github.com/klauspost/compress/zstd.sequenceDecs_decode_56_bmi2 ABI0
+def github.com/klauspost/compress/zstd.sequenceDecs_executeSimple_amd64 ABI0
+def github.com/klauspost/compress/zstd.sequenceDecs_executeSimple_safe_amd64 ABI0
+def github.com/klauspost/compress/zstd.sequenceDecs_decodeSync_amd64 ABI0
+def github.com/klauspost/compress/zstd.sequenceDecs_decodeSync_bmi2 ABI0
+def github.com/klauspost/compress/zstd.sequenceDecs_decodeSync_safe_amd64 ABI0
+def github.com/klauspost/compress/zstd.sequenceDecs_decodeSync_safe_bmi2 ABI0

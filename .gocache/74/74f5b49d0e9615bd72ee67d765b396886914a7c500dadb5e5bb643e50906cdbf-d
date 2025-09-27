@@ -1,0 +1,5 @@
+./slack.go
+./slack_config.go
+./slack_errors.go
+./slack_json.go
+./slack_token.go

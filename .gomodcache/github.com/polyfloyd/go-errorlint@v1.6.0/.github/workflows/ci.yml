@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_call:
+
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
+      with:
+        go-version: stable
+
+    - name: Get dependencies
+      run: go get -v -t -d ./...
+    - name: go build
+      run: go build -v
+    - name: go test
+      run: go test -test.v -race -cover ./...
+
+  conventional-commits:
+    if: github.event_name == 'pull_request' # Only check PRs.
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - run: pip3 install -U Commitizen
+    - run: cz check --rev-range origin/${{ github.base_ref }}..HEAD

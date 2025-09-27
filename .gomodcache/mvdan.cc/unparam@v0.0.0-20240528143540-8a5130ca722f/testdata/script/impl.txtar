@@ -1,0 +1,90 @@
+! exec unparam ./...
+cmpenv stdout stdout.golden
+
+-- go.mod --
+module testdata.tld/foo
+-- stdout.golden --
+foo.go:7:19: oneUnused - b is unused
+foo.go:49:38: (*EnsuredImpl).otherMethod - b is unused
+main${/}main.go:5:19: oneUnused - b is unused
+-- foo.go --
+package foo
+
+import "net/http"
+
+var DoWork func()
+
+func oneUnused(a, b int) int {
+	return a + 123
+}
+
+func Handler(w http.ResponseWriter, r *http.Request) {
+	DoWork()
+	w.Write([]byte("hi"))
+}
+
+type FooIface interface {
+	foo(w http.ResponseWriter, code int) error
+}
+
+type FooMayImpl struct{}
+
+func (f *FooMayImpl) foo(w http.ResponseWriter, code int) error {
+	DoWork()
+	w.Write([]byte("hi"))
+	return nil
+}
+
+func FooMayUse(f FooIface) {
+	f.foo(nil, 0)
+}
+
+func FooDoesUse(f FooMayImpl) {
+	FooMayUse(&f)
+}
+
+type EnsuredIface interface {
+	implMethod(a, b string) string
+}
+
+var _ EnsuredIface = (*EnsuredImpl)(nil)
+
+type EnsuredImpl struct{}
+
+func (e *EnsuredImpl) implMethod(a, b string) string {
+	DoWork()
+	return a + "bar"
+}
+
+func (e *EnsuredImpl) otherMethod(a, b uint) uint {
+	DoWork()
+	return a + 3
+}
+-- main/main.go --
+package main
+
+import "flag"
+
+func oneUnused(a, b int) int {
+	return a + 123
+}
+
+var DoWork func()
+
+type flagFunc func(string)
+
+func (f flagFunc) Set(s string) error {
+	DoWork()
+	f(s)
+	return nil
+}
+
+func (f flagFunc) String() string { return "" }
+
+func init() {
+	someFunc := func(s string) {
+		DoWork()
+		println(s)
+	}
+	flag.Var(flagFunc(someFunc), "someflag", "")
+}

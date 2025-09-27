@@ -1,0 +1,6 @@
+# import config
+packagefile google.golang.org/protobuf/reflect/protoreflect=/home/green/git/green-orb/.gotmp/go-build3445278391/b234/_pkg_.a
+packagefile google.golang.org/protobuf/runtime/protoimpl=/home/green/git/green-orb/.gotmp/go-build3445278391/b240/_pkg_.a
+packagefile reflect=/home/green/git/green-orb/.gocache/ac/ac3ddfeefcfbc7a6eff37144242a9d59313db8462a58437fa501bb6afb7ac6f8-d
+packagefile sync=/home/green/git/green-orb/.gocache/c5/c560cf9f404fceb1a13a7a9846049cebe3f7a1d04efb7121f7b3e1f8d5d990a8-d
+packagefile time=/home/green/git/green-orb/.gocache/fe/fe80f52c8d01ded020a43e5d9edb0060256eba7f05df1d040c0890b2d96c3bc4-d

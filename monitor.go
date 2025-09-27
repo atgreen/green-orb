@@ -52,8 +52,11 @@ func (m *Monitor) MonitorOutput(scanner *bufio.Scanner, isStderr bool) {
 		shouldSuppress := false
 
 		// Process each signal
-		for _, signal := range m.compiledSignals {
-			matches := signal.Regex.FindStringSubmatch(logLine)
+        for _, signal := range m.compiledSignals {
+            if signal.Name != "" && !signalManager.IsEnabled(signal.Name) {
+                continue
+            }
+            matches := signal.Regex.FindStringSubmatch(logLine)
 			if matches != nil {
 				channel, ok := m.channelMap[signal.Channel]
 				if !ok {

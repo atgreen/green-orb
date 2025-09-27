@@ -1,0 +1,4 @@
+./doc.go
+./flags.go
+./typeparam.go
+./varnamelen.go

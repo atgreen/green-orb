@@ -1,0 +1,41 @@
+name: Search and lint repo with asasalint every hour
+
+on: 
+  schedule: 
+    - cron: '0 */1 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  executor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2.4.2
+
+      - name: TestOne
+        run: |
+          gh auth status
+          gh workflow run check-any.yml -F repo_url=https://github.com/beego/beego
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dispatch
+        run: |
+         gh api graphql -f query='
+          query {
+            search(first:50, query:"go in:topics stars:>=2 language:Go sort:updated-desc", type: REPOSITORY) {
+              edges {
+                node {
+                  ... on Repository {
+                    url
+                  }
+                }
+              }
+            }
+          }' --jq '.data.search.edges[].node.url'| xargs -I {} gh workflow run check-any.yml -F repo_url={}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

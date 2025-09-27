@@ -1,0 +1,5 @@
+./filecache.go
+./files.go
+./fsutils.go
+./linecache.go
+./path_unix.go

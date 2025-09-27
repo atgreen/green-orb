@@ -1,0 +1,3 @@
+./marshal.go
+./typeinfo.go
+./xml.go

@@ -1,0 +1,7 @@
+./telegram.go
+./telegram_client.go
+./telegram_config.go
+./telegram_generator.go
+./telegram_json.go
+./telegram_parsemode.go
+./telegram_token.go

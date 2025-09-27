@@ -1,0 +1,4 @@
+./analysis.go
+./diagnostic.go
+./doc.go
+./validate.go

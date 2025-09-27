@@ -1,0 +1,15 @@
+./ast_walker.go
+./bundle.go
+./engine.go
+./filters.go
+./go_version.go
+./gorule.go
+./importer.go
+./ir_loader.go
+./ir_utils.go
+./libdsl.go
+./match_data.go
+./nodepath.go
+./ruleguard.go
+./runner.go
+./utils.go

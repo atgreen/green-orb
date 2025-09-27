@@ -1,0 +1,4 @@
+./doc.go
+./signal.go
+./signal_config.go
+./signal_json.go

@@ -1,0 +1,5 @@
+./common.go
+./normalize.go
+./termlist.go
+./typeparams_go118.go
+./typeterm.go

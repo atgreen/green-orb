@@ -1,0 +1,11 @@
+def github.com/cespare/xxhash/v2.Sum64 ABI0
+ref github.com/cespare/xxhash/v2.primes ABI0
+ref github.com/cespare/xxhash/v2.primes ABI0
+ref github.com/cespare/xxhash/v2.primes ABI0
+ref github.com/cespare/xxhash/v2.primes ABI0
+ref github.com/cespare/xxhash/v2.primes ABI0
+ref github.com/cespare/xxhash/v2.primes ABI0
+ref github.com/cespare/xxhash/v2.primes ABI0
+def github.com/cespare/xxhash/v2.writeBlocks ABI0
+ref github.com/cespare/xxhash/v2.primes ABI0
+ref github.com/cespare/xxhash/v2.primes ABI0

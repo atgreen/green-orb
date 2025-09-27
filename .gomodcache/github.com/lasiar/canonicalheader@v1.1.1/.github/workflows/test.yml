@@ -1,0 +1,63 @@
+name: test
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'v*'
+  pull_request:
+    branches:
+      - 'main'
+      - 'v*'
+  schedule:
+    - cron: '0 8 * * 1' # run "At 08:00 on Monday"ma
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        go-version: ['stable', 'oldstable', 'tip']
+        os: ['macos-latest', 'windows-latest', 'ubuntu-latest']
+        exclude:
+          - go-version: tip
+            os: macos-latest
+
+          - go-version: tip
+            os: windows-latest
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Install Go stable
+        if: matrix.go-version != 'tip'
+        uses: actions/setup-go@master
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Install Go tip
+        if: matrix.go-version == 'tip'
+        run: |
+          curl -sL https://storage.googleapis.com/go-build-snap/go/linux-amd64/$(git ls-remote https://github.com/golang/go.git HEAD | awk '{print $1;}').tar.gz -o gotip.tar.gz
+          ls -lah gotip.tar.gz
+          mkdir -p ~/sdk/gotip
+          tar -C ~/sdk/gotip -xzf gotip.tar.gz
+          ~/sdk/gotip/bin/go version
+          echo "PATH=$HOME/go/bin:$HOME/sdk/gotip/bin/:$PATH" >> $GITHUB_ENV
+          go version
+
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-${{ matrix.go-version }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.go-version }}-go-
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v4
+
+      - name: Test
+        run: |
+          make test

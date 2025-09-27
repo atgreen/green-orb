@@ -1,0 +1,2 @@
+# Wrong rule file
+(*a/wrong.Method.Rule

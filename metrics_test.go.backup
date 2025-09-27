@@ -1,0 +1,338 @@
+package main
+
+import (
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	dto "github.com/prometheus/client_model/go"
+)
+
+// TestMetricsInitialization tests that metrics are properly initialized
+func TestMetricsInitialization(t *testing.T) {
+	// Save original registerer
+	originalReg := prometheus.DefaultRegisterer
+
+	// Create a new registry for testing
+	reg := prometheus.NewRegistry()
+	prometheus.DefaultRegisterer = reg
+
+	// Initialize metrics
+	initMetrics()
+
+	// Restore original registerer
+	defer func() {
+		prometheus.DefaultRegisterer = originalReg
+	}()
+
+	// Check that metrics are registered
+	metrics := []string{
+		"orb_events_total",
+		"orb_signals_matched_total",
+		"orb_actions_total",
+		"orb_action_latency_seconds",
+		"orb_dropped_events_total",
+		"orb_queue_depth",
+		"orb_observed_pid",
+		"orb_checks_total",
+	}
+
+	gatherer := reg.(prometheus.Gatherer)
+	metricFamilies, err := gatherer.Gather()
+	if err != nil {
+		t.Fatalf("Failed to gather metrics: %v", err)
+	}
+
+	registeredMetrics := make(map[string]bool)
+	for _, mf := range metricFamilies {
+		registeredMetrics[*mf.Name] = true
+	}
+
+	for _, metric := range metrics {
+		if !registeredMetrics[metric] {
+			t.Errorf("Metric %s not registered", metric)
+		}
+	}
+}
+
+// TestEventCounter tests the event counter metric
+func TestEventCounter(t *testing.T) {
+	// Reset the counter for testing
+	eventsTotal.Reset()
+
+	// Increment counters
+	eventsTotal.WithLabelValues("stdout").Inc()
+	eventsTotal.WithLabelValues("stdout").Inc()
+	eventsTotal.WithLabelValues("stderr").Inc()
+
+	// Check stdout counter
+	stdoutCount := testutil.ToFloat64(eventsTotal.WithLabelValues("stdout"))
+	if stdoutCount != 2.0 {
+		t.Errorf("stdout events = %f, want 2.0", stdoutCount)
+	}
+
+	// Check stderr counter
+	stderrCount := testutil.ToFloat64(eventsTotal.WithLabelValues("stderr"))
+	if stderrCount != 1.0 {
+		t.Errorf("stderr events = %f, want 1.0", stderrCount)
+	}
+}
+
+// TestSignalMatchCounter tests the signal match counter
+func TestSignalMatchCounter(t *testing.T) {
+	signalsMatched.Reset()
+
+	// Record matches
+	signalsMatched.WithLabelValues("error-pattern", "email-channel").Inc()
+	signalsMatched.WithLabelValues("warning-pattern", "slack-channel").Inc()
+	signalsMatched.WithLabelValues("error-pattern", "email-channel").Inc()
+
+	// Check counter values
+	errorEmailCount := testutil.ToFloat64(signalsMatched.WithLabelValues("error-pattern", "email-channel"))
+	if errorEmailCount != 2.0 {
+		t.Errorf("error-pattern/email-channel = %f, want 2.0", errorEmailCount)
+	}
+
+	warningSlackCount := testutil.ToFloat64(signalsMatched.WithLabelValues("warning-pattern", "slack-channel"))
+	if warningSlackCount != 1.0 {
+		t.Errorf("warning-pattern/slack-channel = %f, want 1.0", warningSlackCount)
+	}
+}
+
+// TestActionMetrics tests action counter and latency metrics
+func TestActionMetrics(t *testing.T) {
+	actionsTotal.Reset()
+
+	// Record successful actions
+	actionsTotal.WithLabelValues("email-channel", "notify", "success").Inc()
+	actionsTotal.WithLabelValues("kafka-channel", "kafka", "success").Inc()
+	actionsTotal.WithLabelValues("email-channel", "notify", "error").Inc()
+
+	// Check counters
+	successCount := testutil.ToFloat64(actionsTotal.WithLabelValues("email-channel", "notify", "success"))
+	if successCount != 1.0 {
+		t.Errorf("email success = %f, want 1.0", successCount)
+	}
+
+	errorCount := testutil.ToFloat64(actionsTotal.WithLabelValues("email-channel", "notify", "error"))
+	if errorCount != 1.0 {
+		t.Errorf("email error = %f, want 1.0", errorCount)
+	}
+
+	// Test latency recording
+	start := time.Now()
+	time.Sleep(10 * time.Millisecond)
+	actionLatency.WithLabelValues("email-channel", "notify").Observe(time.Since(start).Seconds())
+
+	// Verify histogram was updated (checking count)
+	dto := &io_prometheus_client.Metric{}
+	actionLatency.WithLabelValues("email-channel", "notify").Write(dto)
+	if dto.Histogram.GetSampleCount() != 1 {
+		t.Errorf("Histogram sample count = %d, want 1", dto.Histogram.GetSampleCount())
+	}
+}
+
+// TestDroppedEventsCounter tests the dropped events counter
+func TestDroppedEventsCounter(t *testing.T) {
+	droppedEvents.Reset()
+
+	// Record dropped events
+	droppedEvents.WithLabelValues("queue_full").Inc()
+	droppedEvents.WithLabelValues("queue_full").Inc()
+	droppedEvents.WithLabelValues("rate_limited").Inc()
+
+	// Check counters
+	queueFullCount := testutil.ToFloat64(droppedEvents.WithLabelValues("queue_full"))
+	if queueFullCount != 2.0 {
+		t.Errorf("queue_full drops = %f, want 2.0", queueFullCount)
+	}
+
+	rateLimitedCount := testutil.ToFloat64(droppedEvents.WithLabelValues("rate_limited"))
+	if rateLimitedCount != 1.0 {
+		t.Errorf("rate_limited drops = %f, want 1.0", rateLimitedCount)
+	}
+}
+
+// TestQueueDepthGauge tests the queue depth gauge
+func TestQueueDepthGauge(t *testing.T) {
+	// Set queue depth
+	queueDepth.Set(50)
+
+	// Check value
+	depth := testutil.ToFloat64(queueDepth)
+	if depth != 50.0 {
+		t.Errorf("Queue depth = %f, want 50.0", depth)
+	}
+
+	// Update queue depth
+	queueDepth.Set(75)
+
+	depth = testutil.ToFloat64(queueDepth)
+	if depth != 75.0 {
+		t.Errorf("Queue depth after update = %f, want 75.0", depth)
+	}
+}
+
+// TestObservedPIDGauge tests the observed PID gauge
+func TestObservedPIDGauge(t *testing.T) {
+	// Set PID
+	observedPID.Set(12345)
+
+	// Check value
+	pid := testutil.ToFloat64(observedPID)
+	if pid != 12345.0 {
+		t.Errorf("Observed PID = %f, want 12345.0", pid)
+	}
+}
+
+// TestChecksCounter tests the checks counter
+func TestChecksCounter(t *testing.T) {
+	checksTotal.Reset()
+
+	// Record check results
+	checksTotal.WithLabelValues("http", "success").Inc()
+	checksTotal.WithLabelValues("http", "success").Inc()
+	checksTotal.WithLabelValues("http", "error").Inc()
+	checksTotal.WithLabelValues("tcp", "success").Inc()
+	checksTotal.WithLabelValues("flapping", "error").Inc()
+
+	// Verify counters
+	httpSuccess := testutil.ToFloat64(checksTotal.WithLabelValues("http", "success"))
+	if httpSuccess != 2.0 {
+		t.Errorf("http success = %f, want 2.0", httpSuccess)
+	}
+
+	httpError := testutil.ToFloat64(checksTotal.WithLabelValues("http", "error"))
+	if httpError != 1.0 {
+		t.Errorf("http error = %f, want 1.0", httpError)
+	}
+
+	tcpSuccess := testutil.ToFloat64(checksTotal.WithLabelValues("tcp", "success"))
+	if tcpSuccess != 1.0 {
+		t.Errorf("tcp success = %f, want 1.0", tcpSuccess)
+	}
+}
+
+// TestMetricsEndpoint tests the HTTP metrics endpoint
+func TestMetricsEndpoint(t *testing.T) {
+	// Initialize metrics
+	initMetrics()
+
+	// Set some test values
+	eventsTotal.WithLabelValues("stdout").Inc()
+	queueDepth.Set(25)
+	observedPID.Set(9999)
+
+	// Create a test server
+	handler := promhttp.Handler()
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	// Make a request to the metrics endpoint
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		t.Fatalf("Failed to get metrics: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Status code = %d, want 200", resp.StatusCode)
+	}
+
+	// Read the response
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response: %v", err)
+	}
+
+	bodyStr := string(body)
+
+	// Check for expected metrics
+	expectedMetrics := []string{
+		"orb_events_total",
+		"orb_queue_depth 25",
+		"orb_observed_pid 9999",
+	}
+
+	for _, expected := range expectedMetrics {
+		if !strings.Contains(bodyStr, expected) {
+			t.Errorf("Response missing expected metric: %s", expected)
+		}
+	}
+}
+
+// TestMetricsConcurrency tests that metrics are thread-safe
+func TestMetricsConcurrency(t *testing.T) {
+	// Reset counters
+	eventsTotal.Reset()
+	signalsMatched.Reset()
+
+	// Number of goroutines
+	numGoroutines := 100
+	numIncrements := 1000
+
+	// Use a channel to synchronize
+	done := make(chan bool, numGoroutines)
+
+	// Launch concurrent goroutines
+	for i := 0; i < numGoroutines; i++ {
+		go func(id int) {
+			for j := 0; j < numIncrements; j++ {
+				eventsTotal.WithLabelValues("stdout").Inc()
+				signalsMatched.WithLabelValues("test", "channel").Inc()
+			}
+			done <- true
+		}(i)
+	}
+
+	// Wait for all goroutines to complete
+	for i := 0; i < numGoroutines; i++ {
+		<-done
+	}
+
+	// Check final counts
+	expectedCount := float64(numGoroutines * numIncrements)
+
+	eventCount := testutil.ToFloat64(eventsTotal.WithLabelValues("stdout"))
+	if eventCount != expectedCount {
+		t.Errorf("Concurrent event count = %f, want %f", eventCount, expectedCount)
+	}
+
+	signalCount := testutil.ToFloat64(signalsMatched.WithLabelValues("test", "channel"))
+	if signalCount != expectedCount {
+		t.Errorf("Concurrent signal count = %f, want %f", signalCount, expectedCount)
+	}
+}
+
+// BenchmarkMetricsIncrement benchmarks metric increment operations
+func BenchmarkMetricsIncrement(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		eventsTotal.WithLabelValues("stdout").Inc()
+	}
+}
+
+// BenchmarkMetricsObserve benchmarks histogram observe operations
+func BenchmarkMetricsObserve(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		actionLatency.WithLabelValues("test-channel", "notify").Observe(0.001)
+	}
+}
+
+// BenchmarkMetricsWithLabels benchmarks metric operations with label selection
+func BenchmarkMetricsWithLabels(b *testing.B) {
+	labels := []string{"channel1", "channel2", "channel3"}
+	types := []string{"notify", "exec", "kafka"}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		channel := labels[i%len(labels)]
+		actionType := types[i%len(types)]
+		actionsTotal.WithLabelValues(channel, actionType, "success").Inc()
+	}
+}

@@ -1,0 +1,5 @@
+linters-settings:
+  forbidigo:
+    forbid:
+      - fmt\.Print.*
+      - time.Sleep(# no sleeping!)?

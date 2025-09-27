@@ -1,0 +1,4 @@
+./doc.go
+./wecom_config.go
+./wecom_message.go
+./wecom_service.go

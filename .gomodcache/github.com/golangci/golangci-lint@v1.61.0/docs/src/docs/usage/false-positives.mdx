@@ -1,0 +1,177 @@
+---
+title: False Positives
+---
+
+False positives are inevitable, but we did our best to reduce their count.
+For example, we have a default enabled set of [exclude patterns](/usage/configuration#command-line-options).
+
+If a false positive occurred, you have the several choices.
+
+## Specific Linter Excludes
+
+Most of the linters has a configuration, sometimes false-positives can be related to a bad configuration of a linter.
+So it's recommended to check the linters configuration.
+
+Otherwise, some linters have dedicated configuration to exclude or disable rules.
+
+An example with `staticcheck`:
+
+```yml
+linters-settings:
+  staticcheck:
+    checks:
+      - all
+      - '-SA1000' # disable the rule SA1000
+      - '-SA1004' # disable the rule SA1004
+```
+
+## Exclude or Skip
+
+### Exclude Issue by Text
+
+Exclude issue by text using command-line option `-e` or config option `issues.exclude`.
+It's helpful when you decided to ignore all issues of this type.
+Also, you can use `issues.exclude-rules` config option for per-path or per-linter configuration.
+
+In the following example, all the reports that contains the sentences defined in `exclude` are excluded:
+
+```yml
+issues:
+  exclude:
+    - "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*printf?|os\\.(Un)?Setenv). is not checked"
+    - "exported (type|method|function) (.+) should have comment or be unexported"
+    - "ST1000: at least one file in a package should have a package comment"
+```
+
+In the following example, all the reports from the linters (`linters`) that contains the text (`text`) are excluded:
+
+```yml
+issues:
+  exclude-rules:
+    - linters:
+        - mnd
+      text: "Magic number: 9"
+```
+
+In the following example, all the reports from the linters (`linters`) that originated from the source (`source`) are excluded:
+
+```yml
+issues:
+  exclude-rules:
+    - linters:
+        - lll
+      source: "^//go:generate "
+```
+
+In the following example, all the reports that contains the text (`text`) in the path (`path`) are excluded:
+
+```yml
+issues:
+  exclude-rules:
+    - path: path/to/a/file.go
+      text: "string `example` has (\\d+) occurrences, make it a constant"
+```
+
+### Exclude Issues by Path
+
+Exclude issues in path by `issues.exclude-dirs`, `issues.exclude-files` or `issues.exclude-rules` config options.
+
+Beware that the paths that get matched here are relative to the current working directory.
+When the configuration contains path patterns that check for specific directories,
+the `--path-prefix` parameter can be used to extend the paths before matching.
+
+In the following example, all the reports from the linters (`linters`) that concerns the path (`path`) are excluded:
+
+```yml
+issues:
+  exclude-rules:
+    - path: '(.+)_test\.go'
+      linters:
+        - funlen
+        - goconst
+```
+
+The opposite, excluding reports **except** for specific paths, is also possible.
+In the following example, only test files get checked:
+
+```yml
+issues:
+  exclude-rules:
+    - path-except: '(.+)_test\.go'
+      linters:
+        - funlen
+        - goconst
+```
+
+In the following example, all the reports related to the files (`exclude-files`) are excluded:
+
+```yml
+issues:
+  exclude-files:
+    - path/to/a/file.go
+```
+
+In the following example, all the reports related to the directories (`exclude-dirs`) are excluded:
+
+```yml
+issues:
+  exclude-dirs:
+    - path/to/a/dir/
+```
+
+## Nolint Directive
+
+To exclude issues from all linters use `//nolint:all`.
+For example, if it's used inline (not from the beginning of the line) it excludes issues only for this line.
+
+```go
+var bad_name int //nolint:all
+```
+
+To exclude issues from specific linters only:
+
+```go
+var bad_name int //nolint:golint,unused
+```
+
+To exclude issues for the block of code use this directive on the beginning of a line:
+
+```go
+//nolint:all
+func allIssuesInThisFunctionAreExcluded() *string {
+  // ...
+}
+
+//nolint:govet
+var (
+  a int
+  b int
+)
+```
+
+Also, you can exclude all issues in a file by:
+
+```go
+//nolint:unparam
+package pkg
+```
+
+You may add a comment explaining or justifying why `//nolint` is being used on the same line as the flag itself:
+
+```go
+//nolint:gocyclo // This legacy function is complex but the team too busy to simplify it
+func someLegacyFunction() *string {
+  // ...
+}
+```
+
+You can see more examples of using `//nolint` in [our tests](https://github.com/golangci/golangci-lint/tree/master/pkg/result/processors/testdata) for it.
+
+Use `//nolint` instead of `// nolint` because machine-readable comments should have no space by Go convention.
+
+## Default Exclusions
+
+Some exclusions are considered as common, to help golangci-lint users those common exclusions are used as default exclusions.
+
+If you don't want to use it you can set `issues.exclude-use-default` to `false`.
+{.DefaultExclusions}

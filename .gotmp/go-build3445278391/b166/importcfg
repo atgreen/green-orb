@@ -1,0 +1,5 @@
+# import config
+packagefile bytes=/home/green/git/green-orb/.gocache/43/4332ac7d01757459cd9dea85d8533d90abc486b477a3e32e051cc6efe667685b-d
+packagefile github.com/mattn/go-isatty=/home/green/git/green-orb/.gotmp/go-build3445278391/b167/_pkg_.a
+packagefile io=/home/green/git/green-orb/.gocache/a6/a6f04a09d25b4d4b2bf59e809a5e8ed84a718543da536f606059d3b7e094a305-d
+packagefile os=/home/green/git/green-orb/.gocache/ad/ad7c3b683428d868ad15210ae74ff0b6b02e96daf47f8079e73be6b5890d086f-d

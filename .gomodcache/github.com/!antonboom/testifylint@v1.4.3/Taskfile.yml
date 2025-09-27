@@ -1,0 +1,75 @@
+# https://taskfile.dev/#/installation
+version: '3'
+
+silent: true
+
+vars:
+  COVERED_PKGS: |
+    ./analyzer
+    ./internal/analysisutil
+    ./internal/checkers
+    ./internal/config
+
+tasks:
+  default:
+    cmds:
+      - task: tidy
+      - task: fmt
+      - task: lint
+      - task: test
+      - task: install
+
+  tools:install:
+    - echo "Install dev tools..."
+    - go install github.com/daixiang0/gci@latest
+    - go install mvdan.cc/gofumpt@latest
+
+  tidy:
+    cmds:
+      - echo "Tidy..."
+      - go mod tidy
+
+  fmt:
+    cmds:
+      - echo "Fmt..."
+      - gofumpt -w .
+      - gci write -s standard -s default -s "Prefix(github.com/Antonboom/testifylint)" . 2> /dev/null
+
+  lint:
+    cmds:
+      - echo "Lint..."
+      - golangci-lint run --fix ./...
+
+  test:
+    deps: [ test:gen ]
+    cmds:
+      - echo "Test..."
+      - go test ./...
+
+  # task test:checker -- negative-positive
+  test:checker:
+    deps: [ test:gen ]
+    cmds:
+      - go test -count 1 -run TestTestifyLint_CheckersDefault/{{.CLI_ARGS}} ./analyzer
+
+  test:coverage:
+    env:
+      GOEXPERIMENT: nocoverageredesign # https://github.com/golang/go/issues/65653#issuecomment-1955872134
+    cmds:
+      - echo "Test with coverage..."
+      - go test -coverpkg={{ .COVERED_PKGS | trim | splitLines | join "," }} -coverprofile=coverage.out ./...
+
+  test:gen:
+    cmds:
+      - echo "Generate analyzer tests..."
+      - go run ./internal/testgen
+
+  profile:
+    cmds:
+      - echo "Do profiling..."
+      - go test -memprofile=mem.out -cpuprofile=cpu.out ./analyzer
+
+  install:
+    cmds:
+      - echo "Install..."
+      - go install .

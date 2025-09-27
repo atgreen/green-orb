@@ -1,0 +1,14 @@
+name: Lint
+
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    uses: tdakkota/workflows/.github/workflows/lint.yml@master

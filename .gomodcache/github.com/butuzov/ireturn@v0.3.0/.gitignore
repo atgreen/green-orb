@@ -1,0 +1,11 @@
+# artifacts
+coverage.cov
+bin*
+dist*
+
+# generators
+.tmp
+go@*.*
+
+# test examples
+.sandbox/repo-*

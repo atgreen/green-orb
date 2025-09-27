@@ -1,0 +1,9 @@
+package alias
+
+import "net/http"
+
+type myHeader = http.Header
+
+func _() {
+	myHeader{}.Get("Tt") // want `non-canonical header "TT", instead use: "Tt"`
+}

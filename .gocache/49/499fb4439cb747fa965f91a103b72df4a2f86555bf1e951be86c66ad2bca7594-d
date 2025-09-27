@@ -1,0 +1,5 @@
+./enumless_config.go
+./standard.go
+./standard_failures.go
+./standard_logger.go
+./standard_templater.go

@@ -1,0 +1,9 @@
+./ascii.go
+./case.go
+./legal.go
+./mime.go
+./notwords.go
+./replace.go
+./stringreplacer.go
+./url.go
+./words.go

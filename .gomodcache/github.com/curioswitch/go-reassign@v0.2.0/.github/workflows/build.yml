@@ -1,0 +1,40 @@
+name: "Continuous Build"
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-11
+          - macos-12
+          - ubuntu-22.04
+          - windows-2022
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '^1.18.4'
+          cache: true
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.48
+          skip-pkg-cache: true
+          skip-build-cache: true
+      - run: go run mage.go test
+      - run: go run mage.go snapshot
+        if: ${{ matrix.os }} == 'ubuntu-22.04'

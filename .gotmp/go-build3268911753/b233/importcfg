@@ -1,0 +1,4 @@
+# import config
+packagefile errors=/home/green/git/green-orb/.gocache/f4/f41f0bd5ddd3970a457c7f7d070087cac3aaad5c4987393a2776f36f92c18128-d
+packagefile fmt=/home/green/git/green-orb/.gocache/ec/ecb98db685f9c7d7d2b166923fdde9240c881d95f21bbabdc382433bccdc1445-d
+packagefile google.golang.org/protobuf/internal/detrand=/home/green/git/green-orb/.gotmp/go-build3268911753/b234/_pkg_.a

@@ -1,0 +1,8 @@
+./config.go
+./issues.go
+./linters.go
+./linters_settings.go
+./loader.go
+./output.go
+./run.go
+./severity.go

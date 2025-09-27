@@ -1,0 +1,229 @@
+! exec unparam .
+cmp stdout stdout.golden
+
+-- go.mod --
+module testdata.tld/foo
+-- stdout.golden --
+foo.go:9:19: oneUnused - b is unused
+-- foo.go --
+package foo
+
+import "net/http"
+
+type FooType int
+
+var DoWork func()
+
+func oneUnused(a, b int) int {
+	return a + 123
+}
+
+func funcUsesAsParam(fn func(FooType) string) { fn(0) }
+
+func funcPassedAsParam(f FooType) string {
+	DoWork()
+	return "foo"
+}
+
+func (_ FooType) methodPassedAsParam(f FooType) string {
+	DoWork()
+	return "bar"
+}
+
+func PassesFuncsAsParams() {
+	funcUsesAsParam(funcPassedAsParam)
+	var f FooType
+	funcUsesAsParam(f.methodPassedAsParam)
+}
+
+func UsedAsSliceElem() {
+	for _, f := range []func(FooType, int32){
+		func(f FooType, i int32) {
+			DoWork()
+			println(i)
+		},
+	} {
+		f(1, 2)
+	}
+	for _, f := range []struct {
+		f2 func(f FooType, i int64)
+	}{
+		{f2: func(f FooType, i int64) {
+			DoWork()
+			println(i)
+		}},
+	} {
+		f.f2(3, 4)
+	}
+}
+
+func UsedAsArg() {
+	foo := func(f func(f FooType, u uint32)) {
+		f(5, 6)
+	}
+	bar := func(v interface{}) {
+		DoWork()
+		println(v)
+	}
+	foo(func(f FooType, u uint32) {
+		println(f)
+	})
+	bar(func(f FooType, u uint64) {
+		println(f)
+	})
+}
+
+func globalParam(f func(f FooType, i int8)) {
+	f(7, 8)
+}
+
+func usedAsGlobalArg(f FooType, i int8) {
+	DoWork()
+	println(f)
+}
+
+func GlobArgUse() {
+	globalParam(usedAsGlobalArg)
+}
+
+var globalFunc func(f FooType, i uint8)
+
+func usedAsGlobal(f FooType, i uint8) {
+	DoWork()
+	println(f)
+}
+
+func UsesAsGlobal() {
+	globalFunc = usedAsGlobal
+}
+
+type barIface interface {
+	bar(FooType, uint16)
+}
+
+func usedAsPhi(f FooType, i int16) {
+	DoWork()
+	println(f)
+}
+
+var Cond bool
+
+func UsesAsPhi() {
+	fn := usedAsPhi
+	if Cond {
+		fn = func(f FooType, i int16) {
+			DoWork()
+			println(f, i)
+		}
+	}
+	fn(FooType(2), 3)
+}
+
+type barType struct{}
+
+func (b *barType) bar(f FooType, u uint16) {
+	DoWork()
+	println(f)
+}
+
+func barImpl() barIface { return &barType{} }
+
+func BarIfaceUse() {
+	b := barImpl()
+	b.bar(0, 1)
+}
+
+func (f FooType) methodPassedAsFuncLitParam(f2 FooType) bool {
+	if f == 3 {
+		DoWork()
+		return true
+	}
+	return true
+}
+
+func (f FooType) methodPassedAsFuncLitParam2() bool {
+	if f == 4 {
+		DoWork()
+		return true
+	}
+	return true
+}
+
+func MethodUsedAsFuncLitParam() {
+	foo := func(f func(f FooType) bool) {
+		f(2)
+	}
+	var f FooType
+	foo(f.methodPassedAsFuncLitParam)
+	foo((FooType).methodPassedAsFuncLitParam2)
+}
+
+var funcUsedAsGlobalField = http.Client{
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		if req.Method == "GET" {
+			println(req.Host)
+		}
+		return nil
+	},
+}
+
+func (f FooType) checkRedirect(req *http.Request, via []*http.Request) error {
+	if req.Method == "GET" {
+		println(req.Host)
+	}
+	return nil
+}
+
+func MethodUsedAsParamField(client *http.Client) {
+	var f FooType
+	client.CheckRedirect = f.checkRedirect
+}
+
+var mux = http.NewServeMux()
+
+func UsedAsGlobalParam(someBool bool) {
+	mux.HandleFunc("/inline", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			println(r.Host)
+		}
+	})
+	closure := func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" && someBool {
+			println(r.Host)
+		}
+	}
+	mux.HandleFunc("/closureVar", closure)
+}
+
+type FuncInterfaceField struct {
+	Func interface{}
+}
+
+var usedAsGlobalInterfaceField = FuncInterfaceField {
+	Func: func(i int, bs []byte) {
+		if i == 0 {
+			DoWork()
+		}
+	},
+}
+
+type SomeFuncType func(string, string) string
+
+var convertedToType = SomeFuncType(func(a, b string) string {
+	DoWork()
+	return a
+})
+
+var usedAsGlobalInterfaceMapValue = map[string]interface{}{
+	"someFunc": func(i int, s string) {
+		if i == 0 {
+			DoWork()
+		}
+	},
+}
+
+func FuncLitUsedAsReturn(fixedVal int64) func(int64) (int64, error) {
+        return func(int64) (int64, error) {
+                return fixedVal, nil
+        }
+}

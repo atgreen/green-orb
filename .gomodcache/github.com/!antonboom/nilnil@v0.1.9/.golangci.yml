@@ -1,0 +1,78 @@
+run:
+  tests: true
+
+issues:
+  max-same-issues: 0
+
+linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/Antonboom/nilnil)
+
+linters:
+  disable-all: true
+  enable:
+    - asasalint
+    - bidichk
+    - asciicheck
+    - bodyclose
+    - dogsled
+    - dupl
+    - durationcheck
+    - errcheck
+    - errchkjson
+    - errname
+    - exhaustive
+    - exportloopref
+    - forbidigo
+    - gci
+    - gocheckcompilerdirectives
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - gofmt
+    - gofumpt
+    - goheader
+    - goimports
+    - gomoddirectives
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - importas
+    - ineffassign
+    - nilnil
+    - lll
+    - makezero
+    - mirror
+    - misspell
+    - musttag
+    - nakedret
+    - nilerr
+    - nestif
+    - noctx
+    - nolintlint
+    - prealloc
+    - predeclared
+    - reassign
+    - revive
+    - sqlclosecheck
+    - staticcheck
+    - stylecheck
+    - tagliatelle
+    - tenv
+    - testableexamples
+    - thelper
+    - tparallel
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - wastedassign
+    - whitespace

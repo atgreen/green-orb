@@ -18,13 +18,16 @@ type Config struct {
 
 // Channel represents a notification/action channel
 type Channel struct {
-	Name     string `yaml:"name"`
-	Type     string `yaml:"type"`
-	URL      string `yaml:"url"`
-	Template string `yaml:"template"`
-	Topic    string `yaml:"topic"`
-	Broker   string `yaml:"broker"`
-	Shell    string `yaml:"shell"`
+    Name     string `yaml:"name"`
+    Type     string `yaml:"type"`
+    URL      string `yaml:"url"`
+    Template string `yaml:"template"`
+    Topic    string `yaml:"topic"`
+    Broker   string `yaml:"broker"`
+    Shell    string `yaml:"shell"`
+    // Signal toggle (control) fields
+    TargetSignal string `yaml:"target_signal"`
+    Duration     string `yaml:"duration"` // optional TTL on enable (Go duration)
 	// Kafka auth/TLS (optional)
 	SASLMechanism         string `yaml:"sasl_mechanism"`
 	SASLUsername          string `yaml:"sasl_username"`
@@ -45,6 +48,7 @@ type Signal struct {
     Regex    string        `yaml:"regex,omitempty"`
     Channel  string        `yaml:"channel"`
     Schedule *ScheduleSpec `yaml:"schedule,omitempty"`
+    Enabled  *bool         `yaml:"enabled,omitempty"` // optional initial enabled state (default true)
 }
 
 // ScheduleSpec describes the time-based trigger for a signal
@@ -76,8 +80,9 @@ type Check struct {
 
 // CompiledSignal represents a signal with compiled regex
 type CompiledSignal struct {
-	Regex   *regexp.Regexp
-	Channel string
+    Regex   *regexp.Regexp
+    Channel string
+    Name    string
 }
 
 // LoadConfig loads and validates the configuration from a YAML file
@@ -104,8 +109,8 @@ func validateConfig(config *Config) error {
 	// Create a map of channel names for validation
 	channelMap := make(map[string]bool)
 
-	// Validate channels
-	for _, ch := range config.Channels {
+    // Validate channels
+    for _, ch := range config.Channels {
 		if ch.Name == "" {
 			return fmt.Errorf("channel missing required 'name' field")
 		}
@@ -115,7 +120,7 @@ func validateConfig(config *Config) error {
 		channelMap[ch.Name] = true
 
 		// Validate channel type
-		validTypes := []string{"notify", "kafka", "exec", "suppress", "restart", "kill"}
+        validTypes := []string{"notify", "kafka", "exec", "suppress", "restart", "kill", "enable_signal", "disable_signal"}
 		validType := false
 		for _, t := range validTypes {
 			if ch.Type == t {
@@ -127,9 +132,9 @@ func validateConfig(config *Config) error {
 			return fmt.Errorf("invalid channel type '%s' for channel '%s'", ch.Type, ch.Name)
 		}
 
-		// Type-specific validation
-		switch ch.Type {
-		case "notify":
+        // Type-specific validation
+        switch ch.Type {
+        case "notify":
 			if ch.URL == "" {
 				return fmt.Errorf("notify channel '%s' missing required 'url' field", ch.Name)
 			}
@@ -140,12 +145,25 @@ func validateConfig(config *Config) error {
 			if ch.Topic == "" {
 				return fmt.Errorf("kafka channel '%s' missing required 'topic' field", ch.Name)
 			}
-		case "exec":
-			if ch.Shell == "" {
-				return fmt.Errorf("exec channel '%s' missing required 'shell' field", ch.Name)
-			}
-		}
-	}
+        case "exec":
+            if ch.Shell == "" {
+                return fmt.Errorf("exec channel '%s' missing required 'shell' field", ch.Name)
+            }
+        case "enable_signal":
+            if ch.TargetSignal == "" {
+                return fmt.Errorf("enable_signal channel '%s' missing required 'target_signal' field", ch.Name)
+            }
+            if ch.Duration != "" {
+                if _, err := time.ParseDuration(ch.Duration); err != nil {
+                    return fmt.Errorf("enable_signal channel '%s' has invalid duration: %w", ch.Name, err)
+                }
+            }
+        case "disable_signal":
+            if ch.TargetSignal == "" {
+                return fmt.Errorf("disable_signal channel '%s' missing required 'target_signal' field", ch.Name)
+            }
+    }
+    }
 
     // Validate signals (regex or schedule)
     for i, sig := range config.Signals {
@@ -238,6 +256,7 @@ func CompileSignals(signals []Signal) ([]CompiledSignal, error) {
         compiledSignals = append(compiledSignals, CompiledSignal{
             Regex:   re,
             Channel: signal.Channel,
+            Name:    signal.Name,
         })
     }
     return compiledSignals, nil

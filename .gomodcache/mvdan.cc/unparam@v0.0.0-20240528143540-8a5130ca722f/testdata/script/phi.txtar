@@ -1,0 +1,29 @@
+! exec unparam .
+cmp stdout stdout.golden
+
+-- go.mod --
+module testdata.tld/foo
+-- stdout.golden --
+-- foo.go --
+package foo
+
+func allUsedPhi(a, b FooType) *FooType {
+	DoWork()
+	c := a + b
+	return &c
+}
+
+func oneUnusedPhi(a, b FooType) *FooType {
+	DoWork()
+	c := a + 4
+	return &c
+}
+
+func PhiUse(fn2 bool) {
+	var a, b FooType = 2, 3
+	fn := allUsedPhi
+	if fn2 {
+		fn = oneUnusedPhi
+	}
+	println(fn(a, b))
+}

@@ -1,0 +1,50 @@
+{
+  "run": {
+    # timeout for analysis, e.g. 30s, 5m, default is 1m
+    "deadline": "3m",
+    "skip-dirs": ["checkers/rules"],
+  },
+  "fast": false,
+  "linters": {
+    "enable": [
+      "errcheck",
+      "gas",
+      "gocritic",
+      "gofmt",
+      "goimports",
+      "gosimple",
+      "govet",
+      "ineffassign",
+      "megacheck",
+      "misspell",
+      "nakedret",
+      "revive",
+      "staticcheck",
+      "unconvert",
+      "unparam",
+      "unused",
+    ],
+  },
+  "disable": [
+    "depguard",
+    "dupl",
+    "gocyclo",
+    "interfacer",
+    "lll",
+    "maligned",
+    "prealloc",
+    "typecheck",
+  ],
+  "linters-settings": {
+    "gocritic": {
+      "enabled-checks": [
+        "ruleguard",
+      ],
+      "settings": {
+        "ruleguard": {
+          "rules": "rules.go",
+        },
+      },
+    },
+  },
+}

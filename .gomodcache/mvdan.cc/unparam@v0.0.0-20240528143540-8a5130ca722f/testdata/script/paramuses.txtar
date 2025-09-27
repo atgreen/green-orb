@@ -1,0 +1,46 @@
+! exec unparam .
+cmp stdout stdout.golden
+
+-- go.mod --
+module testdata.tld/foo
+-- stdout.golden --
+foo.go:28:36: notUsedInUnderscoreAssignment - s is unused
+-- foo.go --
+package foo
+
+import (
+	"net/http"
+	"time"
+)
+
+var DoWork func()
+
+var Sink interface{}
+
+func UsedInFuncLit(s string) func() {
+	return func() {
+		println(s)
+	}
+}
+
+func StructUsedInField(path string, expiry time.Time) {
+	Sink = http.Cookie{Path: path, Expires: expiry}
+}
+
+func usedInUnderscoreAssignment(s string, d time.Duration) {
+	_ = s
+	DoWork()
+	Sink = d
+}
+
+func notUsedInUnderscoreAssignment(s string, d time.Duration) {
+	if d > 0 {
+		s := 123
+		_ = s
+	}
+	DoWork()
+	Sink = d
+}
+
+func UnusedUnderscoreParam(_ int)            { DoWork() }
+func UnusedUnderscorePrefixedParam(_var int) { DoWork() }

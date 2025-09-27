@@ -1,0 +1,4 @@
+def github.com/pierrec/lz4/v4/internal/lz4block.decodeBlock ABI0
+ref runtime.memmove ABI0
+ref runtime.memmove ABI0
+ref runtime.memmove ABI0

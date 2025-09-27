@@ -1,0 +1,58 @@
+// DescribeACLsRequest describes ACLs. Describing ACLs works on a filter basis:
+// anything that matches the filter is described. Note that there are two
+// "types" of filters in this request: the resource filter and the entry
+// filter, with entries corresponding to users. The first three fields form the
+// resource filter, the last four the entry filter.
+DescribeACLsRequest => key 29, max version 3, flexible v2+
+  // ResourceType is the type of resource to describe.
+  ResourceType: enum-ACLResourceType
+  // ResourceName is the name to filter out. For the CLUSTER resource type,
+  // this must be "kafka-cluster".
+  ResourceName: nullable-string
+  // ResourcePatternType is how ResourceName is understood.
+  ResourcePatternType: enum-ACLResourcePatternType(3) // v1+
+  // Principal is the user to filter for. In Kafka with the simple authorizor,
+  // all principals begin with "User:". Pluggable authorizors are allowed, but
+  // Kafka still expects principals to lead with a principal type ("User") and
+  // have a colon separating the principal name ("bob" in "User:bob").
+  Principal: nullable-string
+  // Host is a host to filter for.
+  Host: nullable-string
+  // Operation is an operation to filter for.
+  //
+  // Note that READ, WRITE, DELETE, and ALTER imply DESCRIBE, and ALTER_CONFIGS
+  // implies DESCRIBE_CONFIGS.
+  Operation: enum-ACLOperation
+  // PermissionType is the permission type to filter for. UNKNOWN is 0.
+  PermissionType: enum-ACLPermissionType
+
+// DescribeACLsResponse is a response to a describe acls request.
+DescribeACLsResponse =>
+  ThrottleMillis(1)
+  // ErrorCode is the error code returned on request failure.
+  //
+  // SECURITY_DISABLED is returned if there is no authorizer configured on the
+  // broker.
+  //
+  // There can be other authorization failures.
+  ErrorCode: int16
+  // ErrorMessage is a message for an error.
+  ErrorMessage: nullable-string
+  // Resources are the describe resources.
+  Resources: [=>]
+    // ResourceType is the resource type being described.
+    ResourceType: enum-ACLResourceType
+    // ResourceName is the resource name being described.
+    ResourceName: string
+    // ResourcePatternType is the pattern type being described.
+    ResourcePatternType: enum-ACLResourcePatternType(3) // v1+
+    // ACLs contains users / entries being described.
+    ACLs: [=>]
+      // Principal is who this ACL applies to.
+      Principal: string
+      // Host is on which host this ACL applies.
+      Host: string
+      // Operation is the operation being described.
+      Operation: enum-ACLOperation
+      // PermissionType is the permission being described.
+      PermissionType: enum-ACLPermissionType

@@ -1,0 +1,46 @@
+// DeleteTopicsRequest deletes Kafka topics.
+DeleteTopicsRequest => key 20, max version 6, flexible v4+, admin
+  // Topics is an array of topics to delete.
+  TopicNames: [string] // v0-v5
+  // The name or topic ID of topics to delete.
+  Topics: [=>] // v6+
+    Topic: nullable-string
+    TopicID: uuid
+  TimeoutMillis
+
+// DeleteTopicsResponse is returned from a DeleteTopicsRequest.
+// Version 3 added the TOPIC_DELETION_DISABLED error proposed in KIP-322
+// and introduced in Kafka 2.1.0. Prior, the request timed out.
+DeleteTopicsResponse =>
+  ThrottleMillis(2) // v1+
+  // Topics contains responses for each topic requested for deletion.
+  Topics: [=>]
+    // Topic is the topic requested for deletion.
+    Topic: nullable-string-v6+
+    // The topic ID requested for deletion.
+    TopicID: uuid // v6+
+    // ErrorCode is the error code returned for an individual topic in
+    // deletion request.
+    //
+    // TOPIC_AUTHORIZATION_FAILED is returned if the client is not authorized
+    // to delete a topic.
+    //
+    // UNKNOWN_TOPIC_OR_PARTITION is returned if the broker does not know of
+    // the topic.
+    //
+    // NOT_CONTROLLER is returned if the request was not issued to a Kafka
+    // controller.
+    //
+    // TOPIC_DELETION_DISABLED is returned for deletion requests version 3+
+    // and brokers >= 2.1.0. INVALID_REQUEST is issued for request versions
+    // 0-2 against brokers >= 2.1.0. Otherwise, the request hangs until it
+    // times out.
+    //
+    // UNSUPPORTED_VERSION is returned when using topic IDs with a cluster
+    // that is not yet Kafka v2.8+.
+    //
+    // UNKNOWN_TOPIC_ID is returned when using topic IDs to a Kafka cluster
+    // v2.8+ and the topic ID is not found.
+    ErrorCode: int16
+    // ErrorMessage is a message for an error.
+    ErrorMessage: nullable-string // v5+
