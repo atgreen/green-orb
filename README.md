@@ -25,6 +25,7 @@ With Green Orb, you can:
 - **Execute Commands**: Run shell commands automatically, allowing actions like capturing thread dumps of the observed process.
 - **Manage Processes**: Restart or kill the observed process to maintain desired state or recover from issues.
 - **Export Metrics**: Expose Prometheus metrics for observability and alerting.
+- **Environment Management**: Automatically load `.env` files to configure your application environment securely.
 
 ## CLI Flags
 
@@ -32,6 +33,8 @@ With Green Orb, you can:
 - `-w, --workers int` number of reporting workers (default `5`).
 - `--metrics-enable` enable Prometheus metrics endpoint (default `false`).
 - `--metrics-addr string` metrics listen address (default `127.0.0.1:9090`).
+- `--env string` load environment variables from specified file.
+- `--skip-dotenv` do not automatically load .env file (default: loads .env if present).
 
 ## Quick Start
 
@@ -60,6 +63,15 @@ ENTRYPOINT [ "orb", "java", "-jar", "jar-file-name.jar" ]
 This assumes `green-orb.yaml` is in the current directory. Use the
 `-c` flag to point it elsewhere. You can pass flags to your command
 without special separators; orb stops parsing at the first non-flag.
+
+### Environment Variables
+
+Green Orb automatically loads environment variables from a `.env` file in the current directory if present. This makes it easy to configure your application environment without exposing secrets in command lines or configuration files.
+
+- `.env` files are loaded automatically (no flag required)
+- Use `--skip-dotenv` to prevent loading `.env`
+- Use `--env myfile.env` to load additional environment files
+- Environment variables are available to both your observed process and orb's templates
 
 The config file tells `orb` what to watch for, and what to do.  For
 instance, if it contains the following, you'll get an email every time
@@ -190,6 +202,22 @@ data with the observed PID in the email subject line:
     template: "{ \"timestamp\": \"{{.Timestamp}}\", \"message\": \"{{.Logline}}\" }"
 ```
 
+Here's an example using environment variables from `.env` for secure configuration:
+
+```
+  - name: "slack-alerts"
+    type: "notify"
+    url:  "slack://{{.Env.SLACK_BOT_TOKEN}}@{{.Env.SLACK_CHANNEL}}"
+    template: "🚨 Alert from {{.Env.APP_NAME}}: {{.Logline}}"
+```
+
+With a `.env` file containing:
+```
+SLACK_BOT_TOKEN=xoxb-your-bot-token
+SLACK_CHANNEL=C1234567890
+APP_NAME=my-web-service
+```
+
 Generic webhooks are handled specially by `shoutrrr`. Their URL
 format is described at
 [https://github.com/nicholas-fedor/shoutrrr/blob/v0.9.1/docs/services/generic/index.md](https://github.com/nicholas-fedor/shoutrrr/blob/v0.9.1/docs/services/generic/index.md).
@@ -283,6 +311,12 @@ Example:
 
 ```
 orb --metrics-enable --metrics-addr 127.0.0.1:9090 myapp ...
+```
+
+With environment file:
+
+```
+orb --env production.env --metrics-enable java -jar myapp.jar
 ```
 
 Prometheus scrape example:

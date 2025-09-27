@@ -533,6 +533,76 @@ func createTemplate(name, text string) (*template.Template, error) {
 
 
 
+// TestLoadEnvFile tests the .env file loading functionality
+func TestLoadEnvFile(t *testing.T) {
+	// Create a temporary env file
+	tmpFile, err := os.CreateTemp("", "test*.env")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	// Write test content
+	content := `# Test env file
+DATABASE_URL=postgresql://localhost:5432/test
+API_KEY="secret-123"
+DEBUG=true
+EMPTY_VALUE=
+# Comment line
+QUOTED_SINGLE='single-quoted'
+PORT=3000`
+
+	if _, err := tmpFile.WriteString(content); err != nil {
+		t.Fatalf("Failed to write to temp file: %v", err)
+	}
+	tmpFile.Close()
+
+	// Save original env values
+	originalDB := os.Getenv("DATABASE_URL")
+	originalAPI := os.Getenv("API_KEY")
+	originalDebug := os.Getenv("DEBUG")
+
+	// Load the env file
+	if err := loadEnvFile(tmpFile.Name()); err != nil {
+		t.Fatalf("loadEnvFile failed: %v", err)
+	}
+
+	// Check that values were loaded correctly
+	tests := []struct {
+		key      string
+		expected string
+	}{
+		{"DATABASE_URL", "postgresql://localhost:5432/test"},
+		{"API_KEY", "secret-123"},
+		{"DEBUG", "true"},
+		{"EMPTY_VALUE", ""},
+		{"QUOTED_SINGLE", "single-quoted"},
+		{"PORT", "3000"},
+	}
+
+	for _, tt := range tests {
+		if got := os.Getenv(tt.key); got != tt.expected {
+			t.Errorf("Expected %s=%s, got %s", tt.key, tt.expected, got)
+		}
+	}
+
+	// Restore original values
+	os.Setenv("DATABASE_URL", originalDB)
+	os.Setenv("API_KEY", originalAPI)
+	os.Setenv("DEBUG", originalDebug)
+}
+
+// TestLoadEnvFileNotFound tests handling of non-existent files
+func TestLoadEnvFileNotFound(t *testing.T) {
+	err := loadEnvFile("nonexistent.env")
+	if err == nil {
+		t.Error("Expected error for non-existent file")
+	}
+	if !os.IsNotExist(err) {
+		t.Errorf("Expected os.IsNotExist error, got %v", err)
+	}
+}
+
 // Benchmark tests
 
 func BenchmarkSignalMatching(b *testing.B) {

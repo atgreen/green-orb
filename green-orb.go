@@ -40,10 +40,53 @@ import (
 
 var version = "dev"
 
+// loadEnvFile loads environment variables from a .env file
+func loadEnvFile(filepath string) error {
+	file, err := os.Open(filepath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Parse KEY=VALUE format
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue // Skip malformed lines
+		}
+
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		// Remove quotes if present
+		if len(value) >= 2 {
+			if (strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`)) ||
+				(strings.HasPrefix(value, `'`) && strings.HasSuffix(value, `'`)) {
+				value = value[1 : len(value)-1]
+			}
+		}
+
+		// Set environment variable
+		os.Setenv(key, value)
+	}
+
+	return scanner.Err()
+}
+
 func main() {
 	var configFilePath = "green-orb.yaml"
 	var numWorkers int64 = 5
 	var metricsAddr = "127.0.0.1:9090"
+	var envFile = ""
+	var skipDotEnv = false
 
 	// Parse arguments manually to stop at first non-flag
 	args := os.Args[1:] // Skip program name
@@ -92,6 +135,14 @@ func main() {
 			}
 			metricsAddr = args[i+1]
 			i++ // Skip the value
+		} else if arg == "--env" {
+			if i+1 >= len(args) {
+				log.Fatal("green-orb error: --env requires a value")
+			}
+			envFile = args[i+1]
+			i++ // Skip the value
+		} else if arg == "--skip-dotenv" {
+			skipDotEnv = true
 		} else if strings.HasPrefix(arg, "--config=") {
 			configFilePath = arg[9:] // Remove "--config="
 		} else if strings.HasPrefix(arg, "--workers=") {
@@ -101,6 +152,8 @@ func main() {
 			}
 		} else if strings.HasPrefix(arg, "--metrics-addr=") {
 			metricsAddr = arg[15:] // Remove "--metrics-addr="
+		} else if strings.HasPrefix(arg, "--env=") {
+			envFile = arg[6:] // Remove "--env="
 		} else {
 			log.Fatalf("green-orb error: unknown flag: %s", arg)
 		}
@@ -111,7 +164,7 @@ func main() {
 		return
 	}
 
-	if err := runObserved(context.Background(), configFilePath, numWorkers, metricsAddr, commandArgs); err != nil {
+	if err := runObserved(context.Background(), configFilePath, numWorkers, metricsAddr, envFile, !skipDotEnv, commandArgs); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -142,13 +195,17 @@ GLOBAL OPTIONS:
    --workers value, -w value  number of reporting workers (default: 5)
    --metrics-enable           enable Prometheus metrics endpoint (default: false)
    --metrics-addr value       Prometheus metrics listen address (default: "127.0.0.1:9090")
+   --env value                load environment variables from specified file
+   --skip-dotenv              do not automatically load .env file (default: loads .env if present)
    --help, -h                 show help
    --version, -v              print the version
 
 EXAMPLES:
-   orb echo "Hello World"                    # Observe echo command
-   orb -c myconfig.yaml ls -la               # Use custom config with ls -la
-   orb --metrics-enable java -jar app.jar   # Enable metrics while observing Java app
+   orb echo "Hello World"                     # Observe echo command (loads .env if present)
+   orb -c myconfig.yaml ls -la                # Use custom config with ls -la
+   orb --metrics-enable java -jar app.jar    # Enable metrics while observing Java app
+   orb --skip-dotenv npm start                # Skip loading .env file
+   orb --env production.env node app.js      # Load custom env file (plus .env unless --skip-dotenv)
 
 COPYRIGHT:
    Copyright (C) 2023-2025  Anthony Green <green@moxielogic.com>.
@@ -158,10 +215,26 @@ COPYRIGHT:
 }
 
 // runObserved contains the core execution logic for running and observing a subprocess.
-func runObserved(ctx context.Context, configFilePath string, numWorkers int64, metricsAddr string, subprocessArgs []string) error {
+func runObserved(ctx context.Context, configFilePath string, numWorkers int64, metricsAddr string, envFile string, loadDotEnv bool, subprocessArgs []string) error {
 	// Drop any leading "--" separators that may be present after CLI parsing.
 	for len(subprocessArgs) > 0 && subprocessArgs[0] == "--" {
 		subprocessArgs = subprocessArgs[1:]
+	}
+
+	// Load environment files if requested
+	if loadDotEnv {
+		if err := loadEnvFile(".env"); err != nil {
+			// Only warn if .env file exists but can't be read
+			if !os.IsNotExist(err) {
+				log.Printf("green-orb warning: failed to load .env file: %v", err)
+			}
+		}
+	}
+
+	if envFile != "" {
+		if err := loadEnvFile(envFile); err != nil {
+			log.Fatalf("green-orb error: failed to load env file %s: %v", envFile, err)
+		}
 	}
 
 	// Load and validate configuration
