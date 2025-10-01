@@ -198,9 +198,6 @@ func validateConfig(config *Config) error {
                     return fmt.Errorf("signal %d has invalid schedule.every: %w", i, err)
                 }
             }
-            if sig.Schedule.Cron != "" {
-                // Basic presence validation; detailed cron spec is validated at runtime by cron parser
-            }
         }
     }
 
