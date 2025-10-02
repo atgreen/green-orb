@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/go-sql-driver/mysql v1.7.1
-	github.com/jackc/pgx/v5 v5.4.3
+	github.com/jackc/pgx/v5 v5.5.4
 	github.com/jmoiron/sqlx v1.3.5
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
 )
