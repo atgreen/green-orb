@@ -3,7 +3,7 @@ module github.com/atgreen/green-orb/orb
 go 1.25.3
 
 require (
-	github.com/nicholas-fedor/shoutrrr v0.11.1
+	github.com/nicholas-fedor/shoutrrr v0.12.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/twmb/franz-go v1.20.2
