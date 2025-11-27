@@ -3,7 +3,7 @@ module github.com/atgreen/green-orb/orb
 go 1.25.3
 
 require (
-	github.com/nicholas-fedor/shoutrrr v0.12.0
+	github.com/nicholas-fedor/shoutrrr v0.12.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/twmb/franz-go v1.20.5
@@ -25,7 +25,7 @@ require (
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.12.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	golang.org/x/sys v0.37.0 // indirect
-	golang.org/x/term v0.36.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/term v0.37.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 )
