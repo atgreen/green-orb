@@ -51,7 +51,6 @@ import (
 	"golang.org/x/tools/go/analysis/internal/analysisflags"
 	"golang.org/x/tools/internal/analysisinternal"
 	"golang.org/x/tools/internal/facts"
-	"golang.org/x/tools/internal/versions"
 )
 
 // A Config describes a compilation unit to be analyzed.
@@ -66,13 +65,17 @@ type Config struct {
 	GoFiles                   []string
 	NonGoFiles                []string
 	IgnoredFiles              []string
+	ModulePath                string            // module path
+	ModuleVersion             string            // module version
 	ImportMap                 map[string]string // maps import path to package path
 	PackageFile               map[string]string // maps package path to file of type information
 	Standard                  map[string]bool   // package belongs to standard library
 	PackageVetx               map[string]string // maps package path to file of fact information
 	VetxOnly                  bool              // run analysis only for facts, not diagnostics
 	VetxOutput                string            // where to write file of fact information
-	SucceedOnTypecheckFailure bool
+	Stdout                    string            // write stdout (e.g. JSON, unified diff) to this file
+	SucceedOnTypecheckFailure bool              // obsolete awful hack; see #18395 and below
+	WarnDiagnostics           bool              // printing diagnostics should not cause a non-zero exit
 }
 
 // Main is the main function of a vet-like analysis tool that must be
@@ -84,6 +87,18 @@ type Config struct {
 //	-V=full         describe executable for build caching
 //	foo.cfg         perform separate modular analyze on the single
 //	                unit described by a JSON config file foo.cfg.
+//
+// Also, subject to approval of proposal #71859:
+//
+//	-fix		don't print each diagnostic, apply its first fix
+//	-diff		don't apply a fix, print the diff (requires -fix)
+//
+// Additionally, the environment variable GOVET has the value "vet" or
+// "fix" depending on whether the command is being invoked by "go vet",
+// to report diagnostics, or "go fix", to apply fixes. This is
+// necessary so that callers of Main can select their analyzer suite
+// before flag parsing. (Vet analyzers must report real code problems,
+// whereas Fix analyzers may fix non-problems such as style issues.)
 func Main(analyzers ...*analysis.Analyzer) {
 	progname := filepath.Base(os.Args[0])
 	log.SetFlags(0)
@@ -129,41 +144,29 @@ func Run(configFile string, analyzers []*analysis.Analyzer) {
 		log.Fatal(err)
 	}
 
+	// Redirect stdout to a file as requested.
+	if cfg.Stdout != "" {
+		f, err := os.Create(cfg.Stdout)
+		if err != nil {
+			log.Fatal(err)
+		}
+		os.Stdout = f
+	}
+
 	fset := token.NewFileSet()
 	results, err := run(fset, cfg, analyzers)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	code := 0
+
 	// In VetxOnly mode, the analysis is run only for facts.
 	if !cfg.VetxOnly {
-		if analysisflags.JSON {
-			// JSON output
-			tree := make(analysisflags.JSONTree)
-			for _, res := range results {
-				tree.Add(fset, cfg.ID, res.a.Name, res.diagnostics, res.err)
-			}
-			tree.Print()
-		} else {
-			// plain text
-			exit := 0
-			for _, res := range results {
-				if res.err != nil {
-					log.Println(res.err)
-					exit = 1
-				}
-			}
-			for _, res := range results {
-				for _, diag := range res.diagnostics {
-					analysisflags.PrintPlain(fset, diag)
-					exit = 1
-				}
-			}
-			os.Exit(exit)
-		}
+		code = processResults(fset, cfg.ID, results, cfg.WarnDiagnostics)
 	}
 
-	os.Exit(0)
+	os.Exit(code)
 }
 
 func readConfig(filename string) (*Config, error) {
@@ -182,6 +185,65 @@ func readConfig(filename string) (*Config, error) {
 		return nil, fmt.Errorf("package has no files: %s", cfg.ImportPath)
 	}
 	return cfg, nil
+}
+
+func processResults(fset *token.FileSet, id string, results []result, warnDiagnostics bool) (exit int) {
+	if analysisflags.Fix {
+		// Don't print the diagnostics,
+		// but apply all fixes from the root actions.
+
+		// Convert results to form needed by ApplyFixes.
+		fixActions := make([]analysisflags.FixAction, len(results))
+		for i, res := range results {
+			fixActions[i] = analysisflags.FixAction{
+				Name:         res.a.Name,
+				FileSet:      fset,
+				ReadFileFunc: os.ReadFile,
+				Diagnostics:  res.diagnostics,
+			}
+		}
+		if err := analysisflags.ApplyFixes(fixActions, false); err != nil {
+			// Fail when applying fixes failed.
+			log.Print(err)
+			exit = 1
+		}
+
+		// Don't proceed to print text/JSON,
+		// and don't report an error
+		// just because there were diagnostics.
+		return
+	}
+
+	// Keep consistent with analogous logic in
+	// printDiagnostics in ../internal/checker/checker.go.
+
+	if analysisflags.JSON {
+		// JSON output
+		tree := make(analysisflags.JSONTree)
+		for _, res := range results {
+			tree.Add(fset, id, res.a.Name, res.diagnostics, res.err)
+		}
+		tree.Print(os.Stdout) // ignore error
+
+	} else {
+		// plain text
+		for _, res := range results {
+			if res.err != nil {
+				log.Println(res.err)
+				exit = 1
+			}
+		}
+		for _, res := range results {
+			for _, diag := range res.diagnostics {
+				analysisflags.PrintPlain(os.Stderr, fset, analysisflags.Context, diag)
+				if !warnDiagnostics {
+					exit = 1
+				}
+			}
+		}
+	}
+
+	return
 }
 
 type factImporter = func(pkgPath string) ([]byte, error)
@@ -255,15 +317,15 @@ func run(fset *token.FileSet, cfg *Config, analyzers []*analysis.Analyzer) ([]re
 		GoVersion: cfg.GoVersion,
 	}
 	info := &types.Info{
-		Types:      make(map[ast.Expr]types.TypeAndValue),
-		Defs:       make(map[*ast.Ident]types.Object),
-		Uses:       make(map[*ast.Ident]types.Object),
-		Implicits:  make(map[ast.Node]types.Object),
-		Instances:  make(map[*ast.Ident]types.Instance),
-		Scopes:     make(map[ast.Node]*types.Scope),
-		Selections: make(map[*ast.SelectorExpr]*types.Selection),
+		Types:        make(map[ast.Expr]types.TypeAndValue),
+		Defs:         make(map[*ast.Ident]types.Object),
+		Uses:         make(map[*ast.Ident]types.Object),
+		Implicits:    make(map[ast.Node]types.Object),
+		Instances:    make(map[*ast.Ident]types.Instance),
+		Scopes:       make(map[ast.Node]*types.Scope),
+		Selections:   make(map[*ast.SelectorExpr]*types.Selection),
+		FileVersions: make(map[*ast.File]string),
 	}
-	versions.InitFileVersions(info)
 
 	pkg, err := tc.Check(cfg.ImportPath, fset, files, info)
 	if err != nil {
@@ -286,7 +348,7 @@ func run(fset *token.FileSet, cfg *Config, analyzers []*analysis.Analyzer) ([]re
 	// Also build a map to hold working state and result.
 	type action struct {
 		once        sync.Once
-		result      interface{}
+		result      any
 		err         error
 		usesFacts   bool // (transitively uses)
 		diagnostics []analysis.Diagnostic
@@ -336,7 +398,7 @@ func run(fset *token.FileSet, cfg *Config, analyzers []*analysis.Analyzer) ([]re
 
 			// The inputs to this analysis are the
 			// results of its prerequisites.
-			inputs := make(map[*analysis.Analyzer]interface{})
+			inputs := make(map[*analysis.Analyzer]any)
 			var failed []string
 			for _, req := range a.Requires {
 				reqact := exec(req)
@@ -359,26 +421,42 @@ func run(fset *token.FileSet, cfg *Config, analyzers []*analysis.Analyzer) ([]re
 				factFilter[reflect.TypeOf(f)] = true
 			}
 
+			module := &analysis.Module{
+				Path:      cfg.ModulePath,
+				Version:   cfg.ModuleVersion,
+				GoVersion: cfg.GoVersion,
+			}
+
 			pass := &analysis.Pass{
-				Analyzer:          a,
-				Fset:              fset,
-				Files:             files,
-				OtherFiles:        cfg.NonGoFiles,
-				IgnoredFiles:      cfg.IgnoredFiles,
-				Pkg:               pkg,
-				TypesInfo:         info,
-				TypesSizes:        tc.Sizes,
-				TypeErrors:        nil, // unitchecker doesn't RunDespiteErrors
-				ResultOf:          inputs,
-				Report:            func(d analysis.Diagnostic) { act.diagnostics = append(act.diagnostics, d) },
+				Analyzer:     a,
+				Fset:         fset,
+				Files:        files,
+				OtherFiles:   cfg.NonGoFiles,
+				IgnoredFiles: cfg.IgnoredFiles,
+				Pkg:          pkg,
+				TypesInfo:    info,
+				TypesSizes:   tc.Sizes,
+				TypeErrors:   nil, // unitchecker doesn't RunDespiteErrors
+				ResultOf:     inputs,
+				Report: func(d analysis.Diagnostic) {
+					// Unitchecker doesn't apply fixes, but it does report them in the JSON output.
+					if err := analysisinternal.ValidateFixes(fset, a, d.SuggestedFixes); err != nil {
+						// Since we have diagnostics, the exit code will be nonzero,
+						// so logging these errors is sufficient.
+						log.Println(err)
+						d.SuggestedFixes = nil
+					}
+					act.diagnostics = append(act.diagnostics, d)
+				},
 				ImportObjectFact:  facts.ImportObjectFact,
 				ExportObjectFact:  facts.ExportObjectFact,
 				AllObjectFacts:    func() []analysis.ObjectFact { return facts.AllObjectFacts(factFilter) },
 				ImportPackageFact: facts.ImportPackageFact,
 				ExportPackageFact: facts.ExportPackageFact,
 				AllPackageFacts:   func() []analysis.PackageFact { return facts.AllPackageFacts(factFilter) },
+				Module:            module,
 			}
-			pass.ReadFile = analysisinternal.MakeReadFile(pass)
+			pass.ReadFile = analysisinternal.CheckedReadFile(pass, os.ReadFile)
 
 			t0 := time.Now()
 			act.result, act.err = a.Run(pass)
