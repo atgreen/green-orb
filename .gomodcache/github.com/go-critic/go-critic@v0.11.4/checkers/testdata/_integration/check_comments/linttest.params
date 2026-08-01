@@ -1,1 +1,0 @@
-check -enable=commentedOutImport,codegenComment ./... | linttest.golden

@@ -1,3 +1,0 @@
-linters-settings:
-  exhaustive:
-    default-signifies-exhaustive: true

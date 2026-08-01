@@ -1,6 +1,0 @@
-{
-    "ast\\.Node": {"param": {"node": "n"}},
-    "linter.CheckerContext": {
-        "param+local+field": {"ctxt": "ctx"}
-    }
-}

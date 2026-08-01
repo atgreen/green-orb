@@ -1,1 +1,0 @@
-/root/target.go:14:10: testrules/boolExprSimplify: suggestion: b (rules2.go:6)

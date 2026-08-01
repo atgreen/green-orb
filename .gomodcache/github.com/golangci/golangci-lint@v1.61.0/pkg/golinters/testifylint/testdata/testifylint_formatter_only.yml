@@ -1,8 +1,0 @@
-linters-settings:
-  testifylint:
-    disable-all: true
-    enable:
-      - formatter
-    formatter:
-      check-format-string: false
-      require-f-funcs: true

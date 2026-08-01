@@ -1,5 +1,0 @@
-linters-settings:
-  gosec:
-    config:
-      global:
-        nosec: true

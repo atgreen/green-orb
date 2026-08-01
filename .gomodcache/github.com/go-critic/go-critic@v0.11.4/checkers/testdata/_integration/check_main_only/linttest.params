@@ -1,2 +1,0 @@
-check -enableAll ./... | linttest.golden
-check -enableAll main.go | linttest.golden

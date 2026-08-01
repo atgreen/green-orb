@@ -1,4 +1,0 @@
-linters-settings:
-  predeclared:
-    ignore: "real,recover"
-    q: true

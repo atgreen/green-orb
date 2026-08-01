@@ -1,3 +1,0 @@
-package testdata
-
-func a() {}

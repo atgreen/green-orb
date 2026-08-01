@@ -1,3 +1,0 @@
-package testdata
-
-//go:dosomething

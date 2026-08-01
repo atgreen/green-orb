@@ -1,4 +1,0 @@
-linters-settings:
-  ireturn:
-    reject:
-    - stdlib

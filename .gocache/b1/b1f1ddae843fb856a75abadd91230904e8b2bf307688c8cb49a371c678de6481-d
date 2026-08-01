@@ -1,5 +1,0 @@
-./log.go
-./logutils.go
-./mock.go
-./out.go
-./stderr_log.go

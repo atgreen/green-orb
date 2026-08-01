@@ -1,9 +1,0 @@
-./checks.go
-./config.go
-./globals.go
-./green-orb.go
-./kafka.go
-./metrics.go
-./monitor.go
-./signals_unix.go
-./worker.go

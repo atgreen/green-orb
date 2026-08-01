@@ -1,4 +1,0 @@
-./errchkjson.go
-./noexported_error.go
-./unsupported_error.go
-./version.go

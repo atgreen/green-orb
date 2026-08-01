@@ -1,6 +1,0 @@
-./flags.go
-./logger.go
-./util.go
-./viper.go
-./viper_go1_15.go
-./watch.go

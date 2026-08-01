@@ -1,3 +1,0 @@
-./fsnotify.go
-./inotify.go
-./inotify_poller.go

@@ -1,3 +1,0 @@
-package directory
-
-func b() {}

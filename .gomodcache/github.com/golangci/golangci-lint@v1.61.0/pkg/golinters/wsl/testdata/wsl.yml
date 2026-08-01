@@ -1,3 +1,0 @@
-linters-settings:
-  wsl:
-    allow-cuddle-declarations: false

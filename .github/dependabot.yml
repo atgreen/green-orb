@@ -1,6 +1,24 @@
 version: 2
 updates:
-  - package-ecosystem: "gomod" 
-    directory: "/" # Location of package manifests
+  # Go modules — the real project manifest at the repo root only.
+  # (The accidental .gomodcache/ tree is untracked + gitignored, so
+  # Dependabot no longer sees the 228 vendored third-party go.mod files.)
+  - package-ecosystem: "gomod"
+    directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      go-dependencies:
+        patterns:
+          - "*"
+
+  # GitHub Actions used by the workflows in .github/workflows/.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

@@ -1,3 +1,0 @@
-// foobar
-
-package fixtures

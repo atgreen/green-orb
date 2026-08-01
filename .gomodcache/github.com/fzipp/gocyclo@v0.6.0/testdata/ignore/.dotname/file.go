@@ -1,3 +1,0 @@
-package dotname
-
-func a() {}

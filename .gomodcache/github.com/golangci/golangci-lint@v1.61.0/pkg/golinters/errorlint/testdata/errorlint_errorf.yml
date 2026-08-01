@@ -1,5 +1,0 @@
-linters-settings:
-  errorlint:
-    errorf: true
-    asserts: false
-    comparison: false

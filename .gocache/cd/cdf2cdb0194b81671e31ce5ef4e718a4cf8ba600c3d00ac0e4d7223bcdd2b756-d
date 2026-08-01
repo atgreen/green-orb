@@ -1,8 +1,0 @@
-./assert.go
-./caser.go
-./convert.go
-./doc.go
-./initialism.go
-./split.go
-./strcase.go
-./unicode.go

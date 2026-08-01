@@ -1,4 +1,0 @@
-linters-settings:
-  nolintlint:
-    require-explanation: true
-    require-specific: true

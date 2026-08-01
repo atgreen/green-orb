@@ -1,4 +1,0 @@
-linters:
-  enable:
-    - prealloc
-    - nakedret

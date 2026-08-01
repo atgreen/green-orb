@@ -1,4 +1,0 @@
-linters-settings:
-  dupword:
-    ignore:
-    - "the"

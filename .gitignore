@@ -19,6 +19,15 @@
 
 # Go workspace file
 go.work
+
+# Accidentally-committed local Go build environment (regenerable via `go build`).
+# These held 228 vendored go.mod + 4 package.json manifests that Dependabot
+# security updates were opening PRs against.
+/.gomodcache/
+/.gocache/
+/.gopath/
+/.gotmp/
+/.bin/
 /oarb
 /# primary binary
 /orb

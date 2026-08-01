@@ -1,6 +1,0 @@
-./doc.go
-./gofmt.go
-./golangci.go
-./internal.go
-./rewrite.go
-./simplify.go
